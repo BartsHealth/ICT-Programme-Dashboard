@@ -1,0 +1,614 @@
+<!doctype html>
+<!-- Barts Health ICT programme overview for the ICT Director, version 1.1 (3 Nov 2026).
+     To add a programme, add an entry to PROGRAMMES in the script below.
+     Put the Trust logo in this folder as barts-health-logo.png (or .svg / .jpg). -->
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="version" content="1.1">
+<title>ICT Programme Overview</title>
+<meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
+<!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+/* Colours are from the NHS identity guidelines: NHS Blue and white dominant, greys for text,
+   greens and highlights used sparingly. Arial is the NHS substitute for Frutiger. */
+:root{
+  color-scheme:light;
+  --nhs-blue:#005EB8; --nhs-dark-blue:#003087; --white:#FFFFFF;
+  --bg:#F0F4F5; --surface:#FFFFFF; --fg:#212B32; --fg2:#425563; --muted:#4C6272;
+  --line:#D8DDE0; --line-strong:#AEB7BD; --track:#E8EDEE;
+  --accent:var(--nhs-blue); --accent-hover:var(--nhs-dark-blue);
+  --rag-g:#007F3B; --rag-a:#FFB81C; --rag-r:#D5281B; --rag-n:#768692;
+  --s-rlh:#005EB8; --s-meh:#ED8B00; --s-sbh:#00A499; --s-rs:#AE2573; --s-nuh:#41B6E6; --s-wch:#78BE20;
+  --today:#D5281B;
+  --f:Arial,"Helvetica Neue",Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--f)}
+a{color:var(--accent)} a:hover{color:var(--accent-hover)}
+:focus-visible{outline:3px solid #FFEB3B;outline-offset:0;box-shadow:0 0 0 6px #212B32}
+h1,h2,h3{margin:0;font-weight:700;text-wrap:balance}
+
+/* Trust header: white, logo top right */
+.nhs-header{background:var(--white);border-bottom:1px solid var(--line)}
+.hdr{max-width:1160px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:80px}
+.service{font-size:19px;font-weight:700;color:var(--nhs-blue);text-decoration:none;line-height:1.25}
+.service:hover{color:var(--nhs-dark-blue)}
+.logo{display:block;height:56px;width:auto;max-width:min(340px,52vw);object-fit:contain}
+.logo-text{font-weight:700;font-size:17px;line-height:1.2;text-align:right;color:var(--fg)}
+.hero{background:var(--nhs-blue);color:var(--white)}
+.hero-inner{max-width:1160px;margin:0 auto;padding:28px 16px 30px;display:grid;gap:10px}
+.hero .eyebrow{margin:0;font-weight:700;font-size:16px}
+.hero h1{font-size:clamp(28px,4.4vw,40px);line-height:1.12}
+.hero .sub{margin:0;max-width:68ch;font-size:17px}
+.hero .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:14px;margin:4px 0 0}
+.ver{border:1px solid var(--white);border-radius:4px;padding:2px 7px;font-size:13px;white-space:nowrap}
+@media (max-width:560px){ .logo{height:42px} .service{font-size:17px} .hdr{min-height:68px} }
+
+.wrap{max-width:1160px;margin:0 auto;padding:28px 16px 56px;display:grid;gap:36px}
+h2{font-size:24px;line-height:1.25;margin-bottom:14px}
+
+/* at a glance */
+.headline{background:var(--surface);border-left:6px solid var(--nhs-blue);padding:16px 20px;margin:0 0 16px;font-size:17px;max-width:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px 18px;display:grid;gap:6px;align-content:start;min-width:0}
+.tile .k{font-size:14px;font-weight:700;color:var(--muted)}
+.tile .v{font-size:28px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .s{font-size:14px;color:var(--fg2)}
+.loading{color:var(--muted)}
+
+/* RAG badge: colour plus letter plus words, never colour alone */
+.rag{--c:var(--rag-n);--ink:#FFFFFF;display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;line-height:1;padding:6px 13px 6px 6px;border-radius:999px;white-space:nowrap;background:var(--c);color:var(--ink)}
+.rag i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--c);display:inline-grid;place-items:center;font-size:12px}
+.rag[data-r="G"]{--c:var(--rag-g)} .rag[data-r="A"]{--c:var(--rag-a);--ink:#212B32} .rag[data-r="R"]{--c:var(--rag-r)}
+.rag.big{font-size:17px;padding:8px 16px 8px 8px} .rag.big i{width:26px;height:26px;font-size:14px}
+.tile .rag{justify-self:start;margin:2px 0}
+
+/* programme cards */
+.progs{display:grid;gap:18px}
+.prog{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--nhs-blue);border-radius:4px;padding:22px;display:grid;gap:18px;min-width:0}
+.prog.planning{border-top-color:var(--rag-n)}
+.prog-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 18px}
+.prog-title{display:grid;gap:4px;min-width:0}
+.prog-title h3{font-size:22px;line-height:1.25}
+.stage{font-size:14px;font-weight:700;color:var(--muted)}
+.desc{margin:0;color:var(--fg2);max-width:75ch}
+.reason{margin:0;font-size:17px;max-width:85ch}
+.pbar{display:grid;gap:6px}
+.track{position:relative;height:14px;background:var(--track);border-radius:7px}
+.track .done{position:absolute;left:0;top:0;bottom:0;background:var(--nhs-blue);border-radius:7px;min-width:4px}
+.track .plan{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;background:var(--fg);border-radius:2px}
+.pbar-label{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:14px;color:var(--fg2)}
+.pk{display:inline-flex;align-items:center;gap:7px}
+.pk i{width:3px;height:14px;background:var(--fg);border-radius:2px;flex:none}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:16px 24px;margin:0}
+.metrics>div{display:grid;gap:2px;align-content:start;min-width:0;border-top:1px solid var(--line);padding-top:10px}
+.metrics dt{font-size:14px;color:var(--muted);font-weight:700}
+.metrics dd{margin:0;font-size:19px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.metrics dd small{display:block;font-size:14px;font-weight:400;color:var(--fg2);line-height:1.4}
+.metrics dd.later{color:var(--rag-r)}
+
+/* schedule strip */
+.sch{display:grid;gap:6px;position:relative}
+.sch h4{margin:0;font-size:15px}
+.sch-area{position:relative;padding-top:20px}
+.sch-track{position:relative;height:22px;background:var(--track);border-radius:4px}
+.seg{position:absolute;top:0;bottom:0;background:var(--c);border-left:2px solid var(--surface);border-radius:4px;min-width:5px;cursor:default}
+.seg:focus-visible{z-index:3}
+.mk{position:absolute;top:-6px;bottom:-6px;width:0;border-left:2px solid var(--fg);z-index:2;pointer-events:none}
+.mk.today{border-color:var(--today);top:-20px}
+.mk.today span{position:absolute;top:0;left:5px;font-size:12.5px;font-weight:700;color:var(--today);white-space:nowrap;line-height:1}
+.mk.today.flip span{left:auto;right:5px}
+.mk.base{border-left-style:dashed}
+.mk.fc{border-left-style:dotted;border-left-width:3px;border-color:var(--nhs-blue)}
+.sch-labels{position:relative;height:18px;font-size:12.5px;font-weight:700;color:var(--fg2)}
+.sch-labels span{position:absolute;top:2px;white-space:nowrap}
+.sch-axis{position:relative;height:18px;border-top:1px solid var(--line-strong);font-size:12.5px;color:var(--muted)}
+.sch-axis span{position:absolute;top:3px;white-space:nowrap;padding-left:4px;border-left:1px solid var(--line-strong);line-height:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--fg2);margin-top:4px}
+.legend .sw{display:inline-flex;align-items:center;gap:6px}
+.legend .sw::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--c);flex:none}
+.legend .ln{display:inline-flex;align-items:center;gap:6px}
+.legend .ln::before{content:"";width:0;height:14px;border-left:2px var(--st,solid) var(--c,var(--fg));flex:none}
+.tip{position:absolute;z-index:10;pointer-events:none;background:var(--surface);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(33,43,50,.16);border-radius:4px;padding:8px 10px;font-size:13.5px;line-height:1.45;min-width:180px;max-width:280px}
+.tip b{display:block}
+
+.prog-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;border-top:1px solid var(--line);padding-top:16px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--nhs-blue);color:var(--white);text-decoration:none;font-weight:700;border-radius:4px;padding:10px 18px;min-height:44px;box-shadow:0 4px 0 var(--nhs-dark-blue)}
+.btn:hover{background:var(--nhs-dark-blue);color:var(--white)}
+.fresh{font-size:14px;color:var(--muted);max-width:70ch}
+.soon{font-size:15px;font-weight:700;color:var(--muted)}
+
+.rules{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px 22px}
+.rules h2{font-size:20px;margin-bottom:10px}
+.rules ul{margin:0;padding-left:0;list-style:none;display:grid;gap:10px}
+.rules li{display:flex;gap:12px;align-items:flex-start}
+.rules li .rag{flex:none;min-width:116px}
+.rules p{margin:12px 0 0;color:var(--fg2);font-size:15px;max-width:90ch}
+.foot{font-size:14px;color:var(--muted);display:grid;gap:6px}
+.foot p{margin:0;max-width:95ch}
+
+@media (prefers-reduced-motion: no-preference){ .track .done{transition:width .4s ease} }
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff;font-size:12pt}
+  .btn,.tip{display:none!important}
+  .prog,.tile,.rules{break-inside:avoid}
+  .wrap{padding-top:16px;gap:20px}
+}
+</style>
+</head>
+<body>
+<header class="nhs-header">
+  <div class="hdr">
+    <a class="service" href="index.html">ICT Programme Dashboard</a>
+    <span>
+      <img class="logo" id="logo" alt="Barts Health NHS Trust" hidden>
+      <span class="logo-text" id="logoText" hidden>Barts Health NHS Trust</span>
+    </span>
+  </div>
+</header>
+<div class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Prepared for the ICT Director</p>
+    <h1>ICT programme overview</h1>
+    <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.1 · 3 Nov 2026</span></p>
+  </div>
+</div>
+
+<main class="wrap">
+  <section aria-labelledby="h-glance">
+    <h2 id="h-glance">At a glance</h2>
+    <p class="headline" id="headline"><span class="loading">Reading the programme spreadsheets…</span></p>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section aria-labelledby="h-progs">
+    <h2 id="h-progs">Programmes</h2>
+    <div class="progs" id="progs" aria-live="polite"></div>
+  </section>
+
+  <section class="rules" aria-labelledby="h-rules">
+    <h2 id="h-rules">How the status is set</h2>
+    <ul id="rules"></ul>
+    <p id="rulesNote"></p>
+  </section>
+
+  <div class="foot" id="foot"></div>
+</main>
+
+<script>
+(() => {
+"use strict";
+const PAGE_VERSION = "1.1 · 3 Nov 2026"; // keep in step with the version text in the header
+
+// The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
+const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
+
+// When a programme is on track, at risk or off track. Days are working days after the baseline finish.
+const RAG_RULES = { greenMaxDays: 5, amberMaxDays: 15, staleLogDays: 5 };
+
+/* The programmes on this page. To add one, copy an entry and change it.
+   stage: "delivery" (rated and shown with figures), "planning" (shown, not rated yet) or "closed".
+   engine: which spreadsheet reader to use (only "wifi" exists so far). lead: optional name to show. */
+const PROGRAMMES = [
+  { title: "Wi-Fi access point refresh", stage: "delivery", lead: null,
+    description: "Replacing wireless access points across all six sites, building by building.",
+    link: "wifi.html", linkText: "Open the Wi-Fi dashboard", spreadsheet: "Barts_WiFi_Refresh_Planner.xlsx", engine: "wifi" },
+  { title: "Printer replacement", stage: "planning", lead: null,
+    description: "Replacing printers across the Trust's sites.",
+    next: "The dashboard will appear here once the printer list and plan are ready.",
+    link: null, spreadsheet: null, engine: null }
+];
+
+const STAGE_TEXT = { delivery: "In delivery", planning: "In planning", closed: "Closed" };
+const RAG_TEXT = { G: "On track", A: "At risk", R: "Off track" };
+const RAG_ORDER = { G: 0, A: 1, R: 2 };
+const SITE_COLOURS = { RLH:"--s-rlh", MEH:"--s-meh", SBH:"--s-sbh", RS:"--s-rs", NUH:"--s-nuh", WCH:"--s-wch" };
+
+const $ = id => document.getElementById(id);
+const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (v==null||v===false) continue; if (k==="class") e.className=v; else if (k==="text") e.textContent=v; else e.setAttribute(k,v); } for (const k of kids) if (k!=null) e.append(k); return e; };
+const pad = n => String(n).padStart(2,"0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const fLong = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const fDay = new Intl.DateTimeFormat("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const fShort = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short"});
+const fMonth = new Intl.DateTimeFormat("en-GB",{month:"short",year:"2-digit"});
+const fStamp = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const nf = new Intl.NumberFormat("en-GB");
+const maxIso = list => list.length ? list.reduce((a,b)=>a>b?a:b) : null;
+const minIso = list => list.length ? list.reduce((a,b)=>a<b?a:b) : null;
+const range = (a,b) => !a||!b ? "–" : (a.getFullYear()===b.getFullYear() ? fShort.format(a) : fLong.format(a)) + " – " + fLong.format(b);
+const plural = (n,w) => `${n} ${w}${n===1?"":"s"}`;
+const TODAY = (() => { const t=new Date(); t.setHours(0,0,0,0); return t; })();
+
+function cellDate(v){
+  if (v==null || v==="") return null;
+  if (typeof v==="number" && isFinite(v)) { const d=new Date(Math.round((v-25569)*86400000)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
+  if (v instanceof Date) return iso(v);
+  const s=String(v).trim(); let m;
+  if ((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+  if ((m=s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+const cellNum = v => { const n = typeof v==="number" ? v : Number(String(v??"").trim()); return v!=null && v!=="" && isFinite(n) ? n : null; };
+const cellText = v => v==null ? "" : String(v).trim();
+
+/* ================= Wi-Fi programme =================
+   The reading, scheduling and forecast rules below are the same as wifi.html, so both pages
+   give the same dates. If you change them in one file, change them in the other. */
+function readWifiWorkbook(wb){
+  const grid = name => wb.Sheets[name] ? XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null, blankrows:true}) : null;
+  const findRow = (g, test) => { for (let i=0;i<Math.min(g.length,60);i++) if (test(g[i]||[])) return i; return -1; };
+  const norm = s => cellText(s).toLowerCase().replace(/\s+/g," ");
+  const names = (wb.Workbook && wb.Workbook.Names) || [];
+  const byName = (n, addr) => {
+    const def = names.find(d => d.Name===n);
+    let sheet="Order of Works", a=addr;
+    if (def && def.Ref){ const m=def.Ref.match(/^'?(.+?)'?!\$?([A-Z]+)\$?(\d+)$/); if (m){ sheet=m[1]; a=m[2]+m[3]; } }
+    const ws=wb.Sheets[sheet]; const c=ws && ws[a]; return c ? c.v : null;
+  };
+  const settings = {
+    start: cellDate(byName("Set_Start","D6")),
+    mins: cellNum(byName("Set_Mins","D7")) || 15,
+    hours: cellNum(byName("Set_Hours","D8")) || 7,
+    teams1: cellNum(byName("Set_Teams","D9")) || 1,
+    teams2: cellNum(byName("Set_Teams2","D10")),
+    from2: cellDate(byName("Set_From2","D11")),
+    newSiteDay: norm(byName("Set_NewDay","D12"))!=="no"
+  };
+  if (!settings.start) throw new Error("The start date is missing from the Order of Works tab.");
+  const gb = grid("Buildings"); if (!gb) throw new Error("The spreadsheet has no Buildings tab.");
+  const hr = findRow(gb, r => norm(r[0])==="order" && r.some(c=>norm(c)==="building"));
+  if (hr<0) throw new Error("Couldn't find the header row on the Buildings tab.");
+  const col = {}; (gb[hr]||[]).forEach((h,i)=>{ if (h!=null) col[norm(h)]=i; });
+  const g = (r,k) => k in col ? r[col[k]] : null;
+  const rows=[];
+  for (let i=hr+1;i<gb.length;i++){
+    const r=gb[i]||[]; const order=cellNum(g(r,"order")); if (order==null) continue;
+    const listed=cellNum(g(r,"rows in tracker"))||0, oos=cellNum(g(r,"out of scope"))||0, dup=cellNum(g(r,"duplicate rows"))||0;
+    rows.push({ id:"b"+i, order, phase:cellNum(g(r,"phase")), site:cellText(g(r,"site")), siteName:cellText(g(r,"site name")), building:cellText(g(r,"building")),
+      listed, oos, dup, aps:listed-oos-dup, fixedStart:cellDate(g(r,"fixed start")), fixedEnd:cellDate(g(r,"fixed end")), status:cellText(g(r,"status"))||"Not started" });
+  }
+  rows.sort((a,b)=>a.order-b.order);
+  if (!rows.length) throw new Error("No buildings found on the Buildings tab.");
+  const phases = new Map(); let baselineName = "";
+  const go = grid("Order of Works");
+  if (go){
+    const ph = findRow(go, r => norm(r[0])==="phase" && norm(r[2])==="what");
+    if (ph>=0){
+      const hdr = go[ph]||[]; const bcol = hdr.findIndex(h=>/(plan|baseline) end/i.test(cellText(h)));
+      if (bcol>=0) baselineName = cellText(hdr[bcol]).replace(/\s*end\b/i,"");
+      for (let i=ph+1;i<go.length;i++){ const r=go[i]||[]; const no=cellNum(r[0]); if (no==null) break;
+        phases.set(no, { no, site:cellText(r[1]), label:cellText(r[2]), baseline: bcol>=0 ? cellDate(r[bcol]) : null }); }
+    }
+  }
+  for (const r of rows) if (!phases.has(r.phase)) phases.set(r.phase, { no:r.phase, site:r.site, label:r.siteName||r.site, baseline:null });
+  const nwd = new Map(); const gn = grid("Non-Working Days");
+  if (gn){ const h=findRow(gn, r=>norm(r[0])==="date"); for (let i=h+1;i<gn.length && h>=0;i++){ const r=gn[i]||[]; const d=cellDate(r[0]); if (d) nwd.set(d, cellText(r[1])); } }
+  const issues=[]; const gi = grid("Tracker Issues");
+  if (gi){ const h=findRow(gi, r=>norm(r[0])==="#" && norm(r[1])==="issue"); if (h>=0){ const hdr=(gi[h]||[]).map(norm);
+    for (let i=h+1;i<gi.length;i++){ const r=gi[i]||[]; if (!cellText(r[1])) continue; const o={}; hdr.forEach((k,j)=>{ if (k) o[k]=cellText(r[j]); }); issues.push(o); } } }
+  const log=[]; const gl = grid("Install Log");
+  if (gl){ const h=findRow(gl, r=>norm(r[0])==="date" && r.some(c=>norm(c).startsWith("aps installed")));
+    if (h>=0){ const hdr=(gl[h]||[]).map(norm); const ci=k=>hdr.findIndex(x=>x.startsWith(k));
+      const cd=ci("date"), cb=ci("building"), ca=ci("aps installed");
+      for (let i=h+1;i<gl.length;i++){ const r=gl[i]||[]; const d=cellDate(r[cd]); const n=cellNum(r[ca]);
+        if (d && n!=null && n>0) log.push({ date:d, building:cb>=0?cellText(r[cb]):"", aps:n }); } } }
+  log.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  return { rows, settings, phases, baselineName, nwd, issues, log };
+}
+
+function wifiStatus(wb){
+  const model = readWifiWorkbook(wb), s = model.settings;
+  const isWork = d => { const w=d.getDay(); return w>0 && w<6 && !model.nwd.has(iso(d)); };
+  const nextWork = d => { let x=new Date(d); while(!isWork(x)) x=addDays(x,1); return x; };
+  const workDays = (a,b) => { let n=0; for (let x=new Date(a); x<=b; x=addDays(x,1)) if (isWork(x)) n++; return n; };
+  const wdDiff = (a,b) => b>=a ? workDays(a,b)-1 : -(workDays(b,a)-1);
+  const isFixed = r => !!(r.fixedStart && r.fixedEnd);
+  const inScope = r => r.aps>0 && r.status!=="Out of scope";
+  const teamsOn = d => s.teams2!=null && s.from2 && iso(d)>=s.from2 ? s.teams2 : s.teams1;
+
+  function computePlan(m){
+    const perDay = t => Math.max(1, Math.floor(t*s.hours*60/m));
+    const cap = d => perDay(teamsOn(d));
+    let start=parse(s.start);
+    const fixedEnds=model.rows.map(r=>r.fixedEnd).filter(Boolean);
+    if (fixedEnds.length){ const after=nextWork(addDays(parse(maxIso(fixedEnds)),1)); if (after>start) start=after; }
+    let day=nextWork(start), used=0, prev=null;
+    const next=()=>{ day=nextWork(addDays(day,1)); used=0; };
+    const out=new Map(), daily=new Map();
+    const addDay=(d,n)=>{ const k=iso(d); daily.set(k,(daily.get(k)||0)+n); };
+    for (const r of model.rows){
+      if (isFixed(r)) { out.set(r.id,{start:r.fixedStart,end:r.fixedEnd,fixed:true});
+        if (inScope(r)){ const ds=[]; for (let x=parse(r.fixedStart); x<=parse(r.fixedEnd); x=addDays(x,1)) if (isWork(x)) ds.push(new Date(x));
+          if (!ds.length) ds.push(parse(r.fixedEnd)); const base=Math.floor(r.aps/ds.length); let extra=r.aps-base*ds.length;
+          ds.forEach(d=>{ addDay(d, base+(extra>0?1:0)); if (extra>0) extra--; }); }
+        continue; }
+      if (!inScope(r)) continue;
+      const key = r.site==="RS" ? r.building : r.site;
+      if (prev!==null && key!==prev && used>0 && s.newSiteDay) next();
+      if (used>=cap(day)) next();
+      const st=new Date(day); let rem=r.aps;
+      while (rem>0){ const take=Math.min(cap(day)-used, rem); used+=take; rem-=take; addDay(day, take); if (rem>0) next(); }
+      out.set(r.id,{start:iso(st), end:iso(day)}); prev=key;
+    }
+    out.daily = daily;
+    return out;
+  }
+  function phaseSummary(plan){
+    const list=[...model.phases.values()].sort((a,b)=>a.no-b.no).map(p=>({...p, aps:0, buildings:0, done:0, starts:[], ends:[]}));
+    const byNo=new Map(list.map(p=>[p.no,p]));
+    for (const r of model.rows){ const p=byNo.get(r.phase); if (!p) continue; const d=plan.get(r.id);
+      if (inScope(r)){ p.aps+=r.aps; p.buildings++; if (r.status==="Complete") p.done++; }
+      if (d && (inScope(r)||d.fixed)){ p.starts.push(d.start); p.ends.push(d.end); } }
+    for (const p of list){ p.start=minIso(p.starts); p.end=maxIso(p.ends); }
+    return list.filter(p=>p.buildings>0);
+  }
+
+  // Planned vs actual and the forecast, as in wifi.html's "Planned vs actual" section
+  const plan=computePlan(s.mins), ph=phaseSummary(plan);
+  const total=model.rows.filter(inScope).reduce((a,r)=>a+r.aps,0);
+  const baseDaily=plan.daily;
+  const pDays=[...baseDaily.keys()].sort(), pStart=parse(pDays[0]), pEnd=parse(pDays[pDays.length-1]);
+  const act=new Map(); for (const e of model.log) act.set(e.date,(act.get(e.date)||0)+e.aps);
+  const aDays=[...act.keys()].sort(); const installed=[...act.values()].reduce((a,b)=>a+b,0);
+  const firstLog=aDays.length?parse(aDays[0]):null, lastLog=aDays.length?parse(aDays[aDays.length-1]):null;
+  const asOf = lastLog && lastLog<TODAY ? lastLog : TODAY;
+  let plannedToDate=0; for (const [k,v] of baseDaily) if (k<=iso(asOf)) plannedToDate+=v;
+  let paceRatio=null, forecast=null;
+  if (installed>0){
+    const lower = pStart<firstLog ? pStart : firstLog;
+    const counted=[]; for (let x=new Date(asOf); x>=lower && counted.length<10; x=addDays(x,-1)) if (isWork(x) && (baseDaily.get(iso(x)) || act.get(iso(x)))) counted.push(new Date(x));
+    let planned=0, done=0; for (const x of counted){ planned+=baseDaily.get(iso(x))||0; done+=act.get(iso(x))||0; }
+    paceRatio = planned>0 ? done/planned : 1;
+    const paceMins = Math.min(120, Math.max(5, s.mins/Math.max(paceRatio,0.01)));
+    if (installed<total){
+      const eff = computePlan(paceMins).daily; const effDays=[...eff.keys()].sort();
+      let x=nextWork(addDays(asOf,1)), c=installed;
+      const effAt=k=>{ let t=0; for (const d of effDays){ if (d<=k) t+=eff.get(d); else break; } return t; };
+      let last=effAt(iso(asOf));
+      for (let guard=0; guard<3000 && c<total; guard++){
+        const cum=effAt(iso(x)); let step=cum-last; last=cum;
+        if (step<=0 && iso(x)>effDays[effDays.length-1]) step=teamsOn(x)*s.hours*60/paceMins;
+        c=Math.min(total, c+Math.max(0,step)); if (c<total) x=nextWork(addDays(x,1));
+      }
+      forecast=x;
+    } else forecast=lastLog;
+  }
+  let varDays=null;
+  if (installed>0){ let c=0, reach=null; for (const k of pDays){ c+=baseDaily.get(k); if (c>=installed){ reach=parse(k); break; } }
+    if (reach) varDays = wdDiff(asOf, reach); }
+
+  // Status
+  const planFin=maxIso(ph.map(p=>p.end).filter(Boolean));
+  const baseFin=maxIso(ph.map(p=>p.baseline).filter(Boolean));
+  const ref=baseFin||planFin, refName=baseFin ? (model.baselineName||"baseline") : "plan";
+  const complete = total>0 && installed>=total;
+  const basis = complete ? "complete" : installed>0 ? "forecast" : "plan";
+  const fcIso = forecast ? iso(forecast) : planFin;
+  const slip = ref && fcIso ? wdDiff(parse(ref), parse(fcIso)) : 0;
+  // working days since the last Install Log entry (before today) that had installs planned
+  let stale=0; const from = lastLog || addDays(pStart,-1);
+  for (let x=addDays(from,1); x<TODAY; x=addDays(x,1)) if (isWork(x) && (baseDaily.get(iso(x))||0)>0) stale++;
+  let rag = complete || slip<=RAG_RULES.greenMaxDays ? "G" : slip<=RAG_RULES.amberMaxDays ? "A" : "R";
+  const staleFlag = !complete && stale>RAG_RULES.staleLogDays;
+  if (staleFlag && rag==="G") rag="A";
+  const rel = d => d===0 ? `the same as the ${refName}` : `${plural(Math.abs(d),"working day")} ${d>0?"later":"earlier"} than the ${refName} (${fLong.format(parse(ref))})`;
+  let reason;
+  if (complete) reason = `All ${nf.format(total)} APs are installed. The last were logged on ${fLong.format(lastLog)}.`;
+  else if (basis==="forecast") reason = `Forecast to finish on ${fLong.format(parse(fcIso))} at the recent install pace, ${rel(slip)}.`;
+  else reason = `No installs logged yet. Planned to finish on ${fLong.format(parse(fcIso))}, ${rel(slip)}.`;
+  if (staleFlag) reason += ` Nothing has been logged for ${plural(stale,"working day")} that had installs planned, so these figures may be out of date.`;
+
+  const t=iso(TODAY);
+  const cur = ph.find(p=>p.start && p.end && p.start<=t && p.end>=t);
+  const upcoming = ph.find(p=>p.start && p.start>t);
+  const nextMs = ph.find(p=>p.end && p.end>=t);
+  const siteNames = new Map(); for (const r of model.rows) if (!siteNames.has(r.site)) siteNames.set(r.site, r.site==="RS" ? "Remote sites" : r.siteName||r.site);
+  const closedRx = /^(closed|resolved|done|complete|completed|fixed)$/i;
+  const doneB = ph.reduce((a,p)=>a+p.done,0), allB = ph.reduce((a,p)=>a+p.buildings,0);
+
+  return {
+    unit:"APs", rag, reason, basis, complete, total, installed, plannedToDate, asOf, lastLog, varDays, paceRatio,
+    planFin, baseFin, fcIso, slip, refName, stale, staleFlag,
+    buildings: allB, buildingsDone: doneB,
+    issuesOpen: model.issues.filter(i=>!closedRx.test(i.status||"")).length, issuesTotal: model.issues.length,
+    phases: ph, siteNames, cur, upcoming, nextMs, pausedFor: cur ? model.nwd.get(t) || null : null,
+    firstInstall: pStart
+  };
+}
+const ENGINES = { wifi: wifiStatus };
+
+/* ================= page ================= */
+async function loadStatus(p){
+  if (p.stage!=="delivery" || !p.engine || !p.spreadsheet) return { p, st:null };
+  try{
+    if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
+    const res=await fetch(p.spreadsheet,{cache:"no-store"}); if (!res.ok) throw new Error(`${p.spreadsheet} couldn't be loaded (${res.status}).`);
+    const wb=XLSX.read(await res.arrayBuffer(),{type:"array"});
+    const st=ENGINES[p.engine](wb); const lm=res.headers.get("Last-Modified"); st.updated = lm ? new Date(lm) : null;
+    return { p, st };
+  } catch(e){ return { p, st:null, error: location.protocol==="file:" ? "Open this page from the website to see the figures; a page opened straight from your computer can't read the spreadsheet." : (e.message||String(e)) }; }
+}
+
+function ragBadge(r, big, text){
+  return el("span",{class:"rag"+(big?" big":""),"data-r":r||"N"}, el("i",{"aria-hidden":"true",text:r||"–"}), text || (r ? RAG_TEXT[r] : "Not rated"));
+}
+function againstPlan(st){
+  if (st.complete) return { v:"Complete", s:`finished ${fLong.format(st.lastLog)}` };
+  if (st.installed===0) return st.plannedToDate>0
+    ? { v:"Behind plan", s:`${nf.format(st.plannedToDate)} APs planned by ${fShort.format(st.asOf)}, none logged`, later:true }
+    : { v:"Not started", s:`first installs ${fLong.format(st.firstInstall)}` };
+  const diff=st.installed-st.plannedToDate, d=st.varDays;
+  const v = diff===0 ? "On plan" : d ? `${plural(Math.abs(d),"working day")} ${d>0?"ahead":"behind"}` : `Less than a day ${diff>0?"ahead":"behind"}`;
+  const s = diff===0 ? `installs match the plan as of ${fShort.format(st.asOf)}` : `${diff>0?"+":"−"}${nf.format(Math.abs(Math.round(diff)))} APs against plan, as of ${fShort.format(st.asOf)}`;
+  return { v, s, later: diff<0 && d<0 };
+}
+
+function renderTiles(results){
+  const del=results.filter(r=>r.p.stage==="delivery"), plan=results.filter(r=>r.p.stage==="planning");
+  const rated=del.filter(r=>r.st);
+  const counts={G:0,A:0,R:0}; for (const r of rated) counts[r.st.rag]++;
+  const worst = rated.length ? rated.map(r=>r.st.rag).sort((a,b)=>RAG_ORDER[b]-RAG_ORDER[a])[0] : null;
+  const host=$("tiles"); host.replaceChildren();
+  const tile=(k,v,s)=>host.append(el("div",{class:"tile"}, el("span",{class:"k",text:k}), typeof v==="string"?el("span",{class:"v",text:v}):v, s?el("span",{class:"s",text:s}):null));
+  tile("Programmes", String(results.length), [del.length&&`${del.length} in delivery`, plan.length&&`${plan.length} in planning`].filter(Boolean).join(" · "));
+  tile("Delivery status", worst ? ragBadge(worst,true, worst==="G" && rated.length>1 ? "All on track" : null) : el("span",{class:"v",text:"–"}),
+    rated.length ? `${counts.G} on track · ${counts.A} at risk · ${counts.R} off track` : "No programme figures available");
+  const ms = rated.filter(r=>r.st.nextMs).map(r=>({r, d:r.st.nextMs.end, label:r.st.nextMs.label})).sort((a,b)=>a.d<b.d?-1:1)[0];
+  tile("Next milestone", ms ? fLong.format(parse(ms.d)) : "–", ms ? `${ms.r.p.title}: ${ms.label} complete (planned)` : null);
+  const iss = rated.reduce((a,r)=>a+r.st.issuesOpen,0);
+  tile("Open tracker issues", String(iss), "Problems found in the programme trackers that need fixing");
+
+  const parts=[`${plural(del.length,"programme")} in delivery${plan.length?` and ${plan.length} in planning`:""}.`];
+  for (const r of del){
+    if (!r.st){ parts.push(`${r.p.title}: figures aren't available right now.`); continue; }
+    const st=r.st, pc=st.total?Math.round(st.installed/st.total*100):0;
+    const fin = st.complete ? "complete" : `${st.basis==="forecast"?"forecast":"planned"} to finish ${fLong.format(parse(st.fcIso))}${st.slip===0?`, in line with the ${st.refName}`:`, ${plural(Math.abs(st.slip),"working day")} ${st.slip>0?"later":"earlier"} than the ${st.refName}`}`;
+    parts.push(`${r.p.title} is ${RAG_TEXT[st.rag].toLowerCase()}: ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit} installed (${pc}%), ${fin}.`);
+  }
+  $("headline").textContent = parts.join(" ");
+}
+
+function renderStrip(st, card){
+  const ph=st.phases.filter(p=>p.start&&p.end); if (!ph.length) return null;
+  let min=parse(ph[0].start), max=parse(maxIso([st.planFin, st.baseFin, st.fcIso].filter(Boolean)));
+  if (TODAY<min) min=TODAY;
+  min=addDays(min,-((min.getDay()+6)%7)); max=addDays(max,7-((max.getDay()+6)%7));
+  const span=(max-min)||1, x=d=>Math.max(0,Math.min(100,(d-min)/span*100));
+  const box=el("div",{class:"sch"}, el("h4",{text:"Schedule by phase"}));
+  const area=el("div",{class:"sch-area"}), track=el("div",{class:"sch-track"}), labels=el("div",{class:"sch-labels","aria-hidden":"true"});
+  for (const p of ph){
+    const a=parse(p.start), b=parse(p.end), l=x(a), w=x(addDays(b,1))-l;
+    const seg=el("div",{class:"seg",tabindex:"0",role:"img",style:`--c:var(${SITE_COLOURS[p.site]||"--rag-n"});left:${l}%;width:${w}%`,"aria-label":`Phase ${p.no}, ${p.label}: ${range(a,b)}, ${nf.format(p.aps)} APs`});
+    seg.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(a,b), `${nf.format(p.aps)} APs · ${plural(p.buildings,"building")}`, `${p.done} of ${p.buildings} complete`]});
+    track.append(seg);
+    if (w>=10) labels.append(el("span",{style:`left:${l}%`,text:`${p.no} ${p.site}`}));
+  }
+  if (TODAY>=min && TODAY<=max){ const tx=x(TODAY); track.append(el("div",{class:"mk today"+(tx>85?" flip":""),style:`left:${tx}%`}, el("span",{text:"Today"}))); }
+  if (st.baseFin) track.append(el("div",{class:"mk base",style:`left:${x(addDays(parse(st.baseFin),1))}%`}));
+  const showFc = st.fcIso && st.fcIso!==(st.baseFin||st.planFin);
+  if (showFc) track.append(el("div",{class:"mk fc",style:`left:${x(addDays(parse(st.fcIso),1))}%`}));
+  const axis=el("div",{class:"sch-axis","aria-hidden":"true"});
+  for (let m=new Date(min.getFullYear(),min.getMonth()+1,1); m<max; m=new Date(m.getFullYear(),m.getMonth()+1,1)) if (x(m)<94) axis.append(el("span",{style:`left:${x(m)}%`,text:fMonth.format(m)}));
+  area.append(track, labels, axis);
+  const tip=el("div",{class:"tip",hidden:""});
+  area.append(tip);
+  const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.map(s=>el("div",{text:s}))); tip.hidden=false;
+    const r=area.getBoundingClientRect(); tip.style.left=Math.max(0,Math.min(cx-r.left+12, r.width-tip.offsetWidth))+"px"; tip.style.top=(cy-r.top+16)+"px"; };
+  area.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
+  area.addEventListener("pointerleave",()=>tip.hidden=true);
+  area.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+Math.min(r.width/2,40),r.bottom-6); } });
+  area.addEventListener("focusout",()=>tip.hidden=true);
+  box.append(area);
+  const lg=el("div",{class:"legend"});
+  for (const site of [...new Set(ph.map(p=>p.site))]) lg.append(el("span",{class:"sw",style:`--c:var(${SITE_COLOURS[site]||"--rag-n"})`,text:`${site} ${st.siteNames.get(site)||""}`.trim()}));
+  lg.append(el("span",{class:"ln",style:"--c:var(--today)",text:"Today"}));
+  if (st.baseFin) lg.append(el("span",{class:"ln",style:"--st:dashed",text:`${st.refName[0].toUpperCase()+st.refName.slice(1)} finish ${fShort.format(parse(st.baseFin))}`}));
+  if (showFc) lg.append(el("span",{class:"ln",style:"--st:dotted;--c:var(--nhs-blue)",text:`Forecast finish ${fShort.format(parse(st.fcIso))}`}));
+  box.append(lg);
+  return box;
+}
+
+function renderProgramme({p, st, error}, i){
+  const hid=`prog-${i}`;
+  const card=el("article",{class:"prog"+(p.stage==="delivery"?"":" planning"),"aria-labelledby":hid});
+  const title=el("div",{class:"prog-title"}, el("h3",{id:hid,text:p.title}),
+    el("span",{class:"stage",text:[STAGE_TEXT[p.stage]||p.stage, p.lead&&`Lead: ${p.lead}`].filter(Boolean).join(" · ")}));
+  const badge = p.stage==="delivery" ? ragBadge(st?st.rag:null, true, st?null:"Not available") : ragBadge(null, true, p.stage==="closed"?"Closed":"Not rated yet");
+  card.append(el("div",{class:"prog-head"}, title, badge));
+  if (p.description) card.append(el("p",{class:"desc",text:p.description}));
+
+  if (p.stage!=="delivery"){
+    if (p.next) card.append(el("p",{class:"reason",text:p.next}));
+    card.append(el("div",{class:"prog-foot"}, p.link ? el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"}) : el("span",{class:"soon",text:"Dashboard coming soon"})));
+    return card;
+  }
+  if (!st){
+    card.append(el("p",{class:"reason",text:`The figures aren't available right now. ${error||""}`.trim()}));
+    if (p.link) card.append(el("div",{class:"prog-foot"}, el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"})));
+    return card;
+  }
+  card.append(el("p",{class:"reason",text:st.reason}));
+
+  const pc=st.total?st.installed/st.total:0, pp=st.total?st.plannedToDate/st.total:0;
+  card.append(el("div",{class:"pbar"},
+    el("div",{class:"track",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.round(pc*100)),"aria-label":`${p.title}: ${Math.round(pc*100)}% installed`},
+      el("i",{class:"done",style:`width:${Math.min(100,pc*100)}%`}), el("b",{class:"plan",style:`left:${Math.min(100,pp*100)}%`,title:`Planned by ${fShort.format(st.asOf)}`})),
+    el("div",{class:"pbar-label"}, el("span",{text:`${Math.round(pc*100)}% installed · ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit}`}),
+      el("span",{class:"pk"}, el("i",{"aria-hidden":"true"}), `Planned by ${fShort.format(st.asOf)}: ${nf.format(Math.round(st.plannedToDate))}`))));
+
+  const ap=againstPlan(st);
+  const fcRel = st.slip===0 ? `same as the ${st.refName}` : `${plural(Math.abs(st.slip),"working day")} ${st.slip>0?"later":"earlier"} than the ${st.refName}`;
+  let now, nowSub;
+  if (st.cur){ now=st.cur.label; nowSub=`Phase ${st.cur.no} of ${st.phases.length} · ${range(parse(st.cur.start),parse(st.cur.end))}${st.pausedFor?` · paused today (${st.pausedFor.replace(/\s*\(.*\)$/,"")})`:""}`; }
+  else if (st.upcoming){ now = st.phases[0].start>iso(TODAY) ? "Not started" : "Between phases"; nowSub=`${st.upcoming.label} starts ${fLong.format(parse(st.upcoming.start))}`; }
+  else { now="All phases done"; nowSub=`last phase planned to end ${fLong.format(parse(st.planFin))}`; }
+  const items=[
+    ["Against plan", ap.v, ap.s, ap.later],
+    [st.basis==="forecast"?"Forecast finish":st.complete?"Finished":"Planned finish", st.complete?fLong.format(st.lastLog):fLong.format(parse(st.fcIso)), st.complete?null:fcRel, st.slip>RAG_RULES.greenMaxDays],
+    [`${st.refName[0].toUpperCase()+st.refName.slice(1)} finish`, st.baseFin?fLong.format(parse(st.baseFin)):"–", "the date the programme is measured against"],
+    ["Buildings complete", `${st.buildingsDone} of ${st.buildings}`, null],
+    ["Planned now", now, nowSub],
+    ["Next milestone", st.nextMs?fLong.format(parse(st.nextMs.end)):"–", st.nextMs?`${st.nextMs.label} complete (planned)`:null],
+    ["Open tracker issues", String(st.issuesOpen), st.issuesTotal>st.issuesOpen?`${st.issuesTotal-st.issuesOpen} closed`:"data problems in the site trackers"]
+  ];
+  card.append(el("dl",{class:"metrics"}, ...items.map(([k,v,s,later])=>el("div",{}, el("dt",{text:k}), el("dd",{class:later?"later":null}, v, s?el("small",{text:s}):null)))));
+  const strip=renderStrip(st, card); if (strip) card.append(strip);
+  const fresh=[st.lastLog?`Figures as of ${fLong.format(st.asOf)}, the last day in the Install Log`:`No installs in the Install Log yet`, st.updated?`spreadsheet updated ${fStamp.format(st.updated)}`:null].filter(Boolean).join(" · ")+".";
+  card.append(el("div",{class:"prog-foot"}, p.link?el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"}):null, el("span",{class:"fresh",text:fresh})));
+  return card;
+}
+
+function renderRules(){
+  const R=RAG_RULES, ul=$("rules"); ul.replaceChildren();
+  const li=(r,t)=>ul.append(el("li",{}, ragBadge(r), el("span",{text:t})));
+  li("G", `Forecast finish is no more than ${plural(R.greenMaxDays,"working day")} after the baseline finish.`);
+  li("A", `Forecast finish is ${R.greenMaxDays+1} to ${R.amberMaxDays} working days after the baseline, or nothing has been logged for more than ${plural(R.staleLogDays,"working day")} that had installs planned.`);
+  li("R", `Forecast finish is more than ${plural(R.amberMaxDays,"working day")} after the baseline.`);
+  $("rulesNote").textContent = "The forecast takes what has actually been installed and runs the rest of the plan at the pace achieved over the last 10 working days that had installs planned or logged, the same as on each programme's dashboard. Until anything is logged, the planned finish is used. Programmes in planning aren't rated.";
+}
+function renderFoot(){
+  const f=$("foot"); f.replaceChildren();
+  f.append(el("p",{text:"Each programme's figures come from its spreadsheet in this folder, read when the page opens, so they are as current as the last upload. Working days are Monday to Friday, leaving out bank holidays and the Christmas break."}));
+  f.append(el("p",{text:`Page version ${PAGE_VERSION}.`}));
+}
+
+// Logo: use the first file that loads; otherwise show the Trust name as text
+(function(){
+  const img=$("logo"), txt=$("logoText"); let i=0;
+  img.addEventListener("load",()=>{ img.hidden=false; txt.hidden=true; });
+  img.addEventListener("error",()=>{ if (i<LOGO_FILES.length) img.src=LOGO_FILES[i++]; else { img.hidden=true; txt.hidden=false; } });
+  if (LOGO_FILES.length) img.src=LOGO_FILES[i++]; else txt.hidden=false;
+})();
+
+$("asAt").textContent = `Status at ${fDay.format(TODAY)}`;
+renderRules(); renderFoot();
+Promise.all(PROGRAMMES.map(loadStatus)).then(results=>{
+  renderTiles(results);
+  const host=$("progs"); host.replaceChildren();
+  const order=[...results].sort((a,b)=>({delivery:0,planning:1,closed:2}[a.p.stage]??3)-({delivery:0,planning:1,closed:2}[b.p.stage]??3));
+  order.forEach((r,i)=>host.append(renderProgramme(r,i)));
+  declutter();
+});
+// Hide phase labels under the schedule strip that would run into the one before
+function declutter(){
+  for (const row of document.querySelectorAll(".sch-labels")){
+    let right=-Infinity;
+    for (const s of row.children){ s.style.visibility=""; const r=s.getBoundingClientRect();
+      if (r.left<right+8) s.style.visibility="hidden"; else right=r.right; }
+  }
+}
+let rz; addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(declutter,120); });
+})();
+</script>
+</body>
+</html>
