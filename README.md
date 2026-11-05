@@ -50,7 +50,7 @@ Each new programme gets its own page (for example `printers.html`) and its own s
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.2** and the Wi-Fi dashboard is **1.7** (5 Nov 2026). If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.3** and the Wi-Fi dashboard is **1.8** (5 Nov 2026). The timeline on the Wi-Fi dashboard always lists phases and buildings in date order. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - Version 1.6 of the Wi-Fi dashboard also fixes the comparison with the 20-min baseline (the phase table's baseline column and the "same as the baseline" note under the finish date), which earlier versions didn't pick up from the spreadsheet.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.

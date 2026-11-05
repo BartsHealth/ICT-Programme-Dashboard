@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Barts Health ICT programme overview for the ICT Director, version 1.2 (5 Nov 2026).
+<!-- Barts Health ICT programme overview for the ICT Director, version 1.3 (5 Nov 2026).
      To add a programme, add an entry to PROGRAMMES in the script below.
      Put the Trust logo in this folder as barts-health-logo.png (or .svg / .jpg). -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.2">
+<meta name="version" content="1.3">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -157,7 +157,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.2 · 5 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.3 · 5 Nov 2026</span></p>
   </div>
 </div>
 
@@ -185,7 +185,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 <script>
 (() => {
 "use strict";
-const PAGE_VERSION = "1.2 · 5 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.3 · 5 Nov 2026"; // keep in step with the version text in the header
 
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
@@ -479,7 +479,7 @@ function renderTiles(results){
 }
 
 function renderStrip(st, card){
-  const ph=st.phases.filter(p=>p.start&&p.end); if (!ph.length) return null;
+  const ph=st.phases.filter(p=>p.start&&p.end).sort((a,b)=>a.start.localeCompare(b.start) || a.end.localeCompare(b.end) || a.no-b.no); if (!ph.length) return null; // chronological
   let min=parse(ph[0].start), max=parse(maxIso([st.planFin, st.baseFin, st.fcIso].filter(Boolean)));
   if (TODAY<min) min=TODAY;
   min=addDays(min,-((min.getDay()+6)%7)); max=addDays(max,7-((max.getDay()+6)%7));

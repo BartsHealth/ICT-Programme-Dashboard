@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 1.7 (5 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 1.8 (5 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.7">
+<meta name="version" content="1.8">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -189,7 +189,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.7 · 5 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.8 · 5 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -284,7 +284,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "1.7 · 5 Nov 2026";
+const PAGE_VERSION = "1.8 · 5 Nov 2026";
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
 
@@ -693,13 +693,17 @@ function renderTimeline(plan, ph){
   const today=new Date(); today.setHours(0,0,0,0);
   if (today>=min && today<max) grid.append(el("div",{class:"today",style:`left:${x(today)}%`}, el("span",{text:"Today"})));
   tl.append(axis); const body=el("div",{style:"position:relative"}); body.append(grid);
-  for (const p of ph){
+  // Always chronological: phases by start date, and buildings within each phase by start then end date (order of works breaks ties)
+  const LAST="9999-12-31";
+  const phs=[...ph].sort((a,b)=>(a.start||LAST).localeCompare(b.start||LAST) || (a.end||LAST).localeCompare(b.end||LAST) || a.no-b.no);
+  for (const p of phs){
     const head=el("div",{class:"tl-row ph"}, el("div",{class:"lbl2"}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:String(p.no)}), el("span",{text:p.label})), el("div",{class:"tl-track"}));
     if (p.start&&p.end){ const s=parse(p.start), e=parse(p.end); const b=el("div",{class:"bar span",style:`--c:${siteVar(p.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`});
       b.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(s,e), `${workDays(s,e)} working days · ${nf.format(p.aps)} APs`]}); head.lastChild.append(b); }
     body.append(head);
-    for (const r of model.rows.filter(r=>r.phase===p.no && (inScope(r)||isFixed(r)))){
-      const d=plan.get(r.id); const row=el("div",{class:"tl-row"}, el("div",{class:"lbl2",title:r.building,text:r.building}), el("div",{class:"tl-track"}));
+    const prs=model.rows.filter(r=>r.phase===p.no && (inScope(r)||isFixed(r))).map(r=>({r,d:plan.get(r.id)}))
+      .sort((a,b)=>((a.d&&a.d.start)||LAST).localeCompare((b.d&&b.d.start)||LAST) || ((a.d&&a.d.end)||LAST).localeCompare((b.d&&b.d.end)||LAST) || a.r.order-b.r.order);
+    for (const {r,d} of prs){ const row=el("div",{class:"tl-row"}, el("div",{class:"lbl2",title:r.building,text:r.building}), el("div",{class:"tl-track"}));
       if (d){ const s=parse(d.start), e=parse(d.end);
         const b=el("div",{class:"bar"+(d.fixed?" fixed":""),tabindex:"0",style:`--c:${siteVar(r.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`,"aria-label":`${r.building}, ${range(s,e)}`});
         b.dataset.tip=JSON.stringify({t:r.building, l:[`${r.site} · ${r.siteName}`, range(s,e), `${workDays(s,e)} working days · ${r.aps} APs`, d.fixed?"Fixed dates":null, `Status: ${r.status}`]});
