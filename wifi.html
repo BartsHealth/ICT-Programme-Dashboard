@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 1.6 (3 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 1.7 (5 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.6">
+<meta name="version" content="1.7">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -189,7 +189,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.6 · 3 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.7 · 5 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -284,7 +284,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "1.6 · 3 Nov 2026";
+const PAGE_VERSION = "1.7 · 5 Nov 2026";
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
 
@@ -418,7 +418,7 @@ function computePlan(m){
   const perDay = t => Math.max(1, Math.floor(t*s.hours*60/m));
   const cap = d => perDay(s.teams2!=null && s.from2 && iso(d)>=s.from2 ? s.teams2 : s.teams1);
   let start=parse(s.start);
-  const fixedEnds=model.rows.map(r=>r.fixedEnd).filter(Boolean);
+  const fixedEnds=model.rows.filter(r=>r.status==="Complete").map(r=>r.fixedEnd).filter(Boolean); // the rest start after the last completed building; other fixed dates run alongside
   if (fixedEnds.length){ const after=nextWork(addDays(parse(maxIso(fixedEnds)),1)); if (after>start) start=after; }
   let day=nextWork(start), used=0, prev=null;
   const next=()=>{ day=nextWork(addDays(day,1)); used=0; };
@@ -439,6 +439,7 @@ function computePlan(m){
     out.set(r.id,{start:iso(st), end:iso(day)}); prev=key;
   }
   out.daily = daily; // planned APs per working day
+  out.start = iso(nextWork(start)); // the day the remaining buildings start
   return out;
 }
 function phaseSummary(plan){
@@ -612,8 +613,9 @@ function renderInstall(plan, ph){
     dl.textContent = d===0 ? `Same as the ${bname}` : `${Math.abs(d)} working day${Math.abs(d)===1?"":"s"} ${d>0?"later":"earlier"} than the ${bname} (${fLong.format(parse(baseFin))})`; }
   else dl.textContent="";
   const two = s.teams2!=null && s.from2;
-  const fixed=model.rows.filter(isFixed).map(r=>r.building);
-  $("basis").textContent = `${perDay(s.teams1)} APs a day${two?`, then ${perDay(s.teams2)} a day from ${fLong.format(parse(s.from2))}`:""}. From the spreadsheet: remaining buildings start ${fLong.format(parse(s.start))}, ${s.hours} hours installing a day Monday to Friday, ${s.teams1} team${s.teams1===1?"":"s"} of 2${two?`, then ${s.teams2} from ${fLong.format(parse(s.from2))}`:""}.${fixed.length? ` ${fixed.length<=3?fixed.join(", "):fixed.length+" buildings"} keep${fixed.length===1?"s":""} fixed dates.`:""}`;
+  const done=model.rows.filter(r=>isFixed(r) && r.status==="Complete").length, booked=model.rows.filter(r=>isFixed(r) && r.status!=="Complete" && inScope(r)).map(r=>r.building);
+  const rs=computePlan(mins).start;
+  $("basis").textContent = `${perDay(s.teams1)} APs a day${two?`, then ${perDay(s.teams2)} a day from ${fLong.format(parse(s.from2))}`:""}. From the spreadsheet: remaining buildings start ${fLong.format(parse(rs))}${done?`, after the ${done} building${done===1?"":"s"} marked Complete`:""}, ${s.hours} hours installing a day Monday to Friday, ${s.teams1} team${s.teams1===1?"":"s"} of 2${two?`, then ${s.teams2} from ${fLong.format(parse(s.from2))}`:""}.${booked.length? ` Booked alongside the plan on fixed dates: ${booked.length<=3?booked.join(", "):booked.length+" buildings"}.`:""}`;
   // phase table
   const t=$("phaseTable"); t.replaceChildren();
   const hasBase = ph.some(p=>p.baseline);
