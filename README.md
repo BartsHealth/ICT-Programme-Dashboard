@@ -63,7 +63,7 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.4**, the Wi-Fi dashboard **1.8** and the printer dashboard **1.0** (5 Nov 2026). The timelines always list phases and areas in date order. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.4**, the Wi-Fi dashboard **1.9** and the printer dashboard **1.1** (5 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.
 - Opening a page straight from your computer can't read its spreadsheet automatically. The dashboards ask you to choose the file instead.

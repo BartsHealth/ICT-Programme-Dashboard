@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 1.8 (5 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 1.9 (5 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.8">
+<meta name="version" content="1.9">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -139,6 +139,15 @@ table.mini{border-collapse:collapse;width:100%;font-size:13px}
 .tip{position:absolute;z-index:10;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:180px;max-width:280px}
 .tip b{display:block;font-size:13.5px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+/* ahead or behind plan */
+.var-wrap{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:18px;margin-top:6px}
+.var-wrap h3{font-size:17px;margin:0}
+.var-wrap .chart h4{font-size:14px;margin:0 0 4px}
+.var-now{font-weight:700}
+.var-now.ahead{color:var(--good-text)} .var-now.behind{color:var(--crit-text)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;flex:none}
+details.var-table summary{cursor:pointer;font-size:13.5px;color:var(--accent);font-weight:700}
+details.var-table .mini td.ahead{color:var(--good-text);font-weight:600} details.var-table .mini td.behind{color:var(--crit-text);font-weight:600}
 
 /* building table */
 .tbl-scroll{overflow-x:auto}
@@ -189,7 +198,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.8 · 5 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.9 · 5 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -227,6 +236,14 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
       <div class="chart" id="progChart"><div id="progSvg"></div><div class="tip" id="progTip" hidden></div></div>
       <div class="legend" id="progLegend"></div>
       <p class="hint" id="progNote"></p>
+      <div class="var-wrap" id="varWrap">
+        <h3>Ahead or behind plan</h3>
+        <p class="hint" id="varIntro"></p>
+        <div class="chart" id="varDailyChart"><h4>Each day</h4><div id="varDailySvg"></div><div class="tip" id="varDailyTip" hidden></div></div>
+        <div class="chart" id="varCumChart"><h4>Running total</h4><div id="varCumSvg"></div><div class="tip" id="varCumTip" hidden></div></div>
+        <div class="legend" id="varLegend"></div>
+        <details class="var-table" id="varDetails"><summary>Show the figures as a table</summary><div class="tbl-scroll"><table class="mini" id="varTable"></table></div></details>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="h-wi">
@@ -284,7 +301,8 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "1.8 · 5 Nov 2026";
+const PAGE_VERSION = "1.9 · 5 Nov 2026";
+const DONE_WORD = "installed"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
 
@@ -577,6 +595,68 @@ function renderProgress(planAtMins){
   $("progNote").textContent = installed>0
     ? `Recent pace compares what was installed with what the plan expected over the last ${paceDays} working day${paceDays===1?"":"s"} with installs planned or logged (${fShort.format(paceFrom)} to ${fShort.format(asOf)}). The forecast starts from the actual total and runs the rest of the plan at that pace${s.teams2!=null&&s.from2?`, including the second team from ${fLong.format(parse(s.from2))}`:""}. Comparisons are as of ${fLong.format(asOf)}, the last day logged.`
     : "No installs logged yet. Add a row to the Install Log tab in the spreadsheet for each building on each day (date, building, APs installed) and the actual line and forecast will appear here.";
+  renderVariance(baseDaily, act, firstLog && firstLog<pStart ? firstLog : pStart, asOf, today);
+}
+
+/* ---------------- ahead or behind plan: bars either side of a zero line ---------------- */
+function renderVariance(baseDaily, act, from, asOf, today){
+  const days=[]; let cp=0, ca=0;
+  if (from && asOf>=from) for (let x=new Date(from); x<=asOf; x=addDays(x,1)){
+    const k=iso(x), p=Math.round(baseDaily.get(k)||0), a=act.get(k)||0;
+    if (!isWork(x) && !p && !a) continue;
+    cp+=p; ca+=a; days.push({d:new Date(x), p, a, diff:a-p, cp, ca, cdiff:ca-cp});
+  }
+  const intro=$("varIntro"), dHost=$("varDailySvg"), cHost=$("varCumSvg"), lg=$("varLegend"), tb=$("varTable");
+  for (const h of [dHost,cHost,lg,tb]) h.replaceChildren();
+  const show=days.length>0; for (const id of ["varDailyChart","varCumChart","varLegend","varDetails"]) $(id).hidden=!show;
+  if (!show){ intro.textContent=`These charts appear once the plan's first working day (${from?fLong.format(from):"–"}) has passed.`; return; }
+  const last=days[days.length-1], signed=v=>`${v>0?"+":v<0?"−":""}${nf.format(Math.abs(v))}`;
+  const nowTxt = last.cdiff===0 ? "on plan" : `${nf.format(Math.abs(last.cdiff))} APs ${last.cdiff>0?"ahead of":"behind"} plan`;
+  intro.replaceChildren(`What was ${DONE_WORD} each working day against what the plan expected, from ${fShort.format(from)} to ${fShort.format(asOf)}${iso(asOf)<iso(today)?", the last day logged":""}. Bars above the line are ahead of plan; red bars below it are behind. Running total now: `,
+    el("span",{class:"var-now"+(last.cdiff>0?" ahead":last.cdiff<0?" behind":""),text:nowTxt}), ".");
+  drawVar(dHost, $("varDailyTip"), $("varDailyChart"), days, d=>d.diff, d=>[`Planned: ${nf.format(d.p)} APs`, `Actual: ${nf.format(d.a)} APs`, d.diff>0?`Ahead by ${nf.format(d.diff)}`:d.diff<0?`Behind by ${nf.format(-d.diff)}`:"On plan"],
+    `Each day's ${DONE_WORD} APs against plan, ${fShort.format(from)} to ${fShort.format(asOf)}`, false);
+  drawVar(cHost, $("varCumTip"), $("varCumChart"), days, d=>d.cdiff, d=>[`Planned to date: ${nf.format(d.cp)} APs`, `Actual to date: ${nf.format(d.ca)} APs`, d.cdiff>0?`Ahead by ${nf.format(d.cdiff)}`:d.cdiff<0?`Behind by ${nf.format(-d.cdiff)}`:"On plan"],
+    `Running total of APs ${DONE_WORD} against plan, ${fShort.format(from)} to ${fShort.format(asOf)}: ${nowTxt}`, true);
+  lg.append(el("span",{class:"key"}, el("span",{class:"sw",style:"background:var(--good)"}), "Ahead of plan (above the line)"),
+            el("span",{class:"key"}, el("span",{class:"sw",style:"background:var(--crit-text)"}), "Behind plan (below the line)"));
+  tb.append(el("thead",{}, el("tr",{}, ...["Date","Planned",`Actually ${DONE_WORD}`,"That day","Running total"].map((h,i)=>el("th",{class:i?"n":null,text:h})))));
+  const body=el("tbody"); for (const d of days) body.append(el("tr",{}, el("td",{text:fLong.format(d.d)}), el("td",{class:"n",text:nf.format(d.p)}), el("td",{class:"n",text:nf.format(d.a)}),
+    el("td",{class:"n"+(d.diff>0?" ahead":d.diff<0?" behind":""),text:signed(d.diff)}), el("td",{class:"n"+(d.cdiff>0?" ahead":d.cdiff<0?" behind":""),text:signed(d.cdiff)})));
+  tb.append(body);
+}
+function drawVar(host, tip, chart, days, val, tipLines, label, endLabel){
+  const W=900, H=230, L=56, R=28, T=14, B=30, n=days.length;
+  const nice=v=>{ const p=Math.pow(10,Math.floor(Math.log10(v))), m=v/p; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; };
+  const M=nice(Math.max(1, ...days.map(d=>Math.abs(val(d)))));
+  const ys=v=>T+(1-(v+M)/(2*M))*(H-T-B), y0=ys(0);
+  const bw=(W-L-R)/n, w=Math.max(1, Math.min(28, bw-2)), xs=i=>L+i*bw+(bw-w)/2;
+  const NS="http://www.w3.org/2000/svg";
+  const S_=(tag,attrs,text)=>{ const e=document.createElementNS(NS,tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v); if (text!=null) e.textContent=text; return e; };
+  const svg=S_("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":label});
+  for (const v of [-M,-M/2,M/2,M]){ const y=ys(v); svg.append(S_("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)"}));
+    svg.append(S_("text",{x:L-8,y:y+4,"text-anchor":"end",class:"ax"},`${v>0?"+":"−"}${nf.format(Math.abs(v))}`)); }
+  svg.append(S_("text",{x:L+6,y:T+12,class:"ax"},"Ahead"));
+  svg.append(S_("text",{x:L+6,y:H-B-6,class:"ax"},"Behind"));
+  const k=Math.max(1, Math.ceil(n/8));
+  days.forEach((d,i)=>{ if (i%k===0 || i===n-1 && (n-1)%k>=Math.ceil(k/2)) svg.append(S_("text",{x:xs(i)+w/2,y:H-B+18,"text-anchor":"middle",class:"ax"},fShort.format(d.d))); });
+  // bars: square at the zero line, rounded at the far end
+  days.forEach((d,i)=>{ const v=val(d); if (!v) return; const x=xs(i), y1=ys(v), r=Math.min(4, w/2, Math.abs(y1-y0));
+    const up=y1<y0, e=up?y1+r:y1-r;
+    svg.append(S_("path",{d:`M${x},${y0} V${e} Q${x},${y1} ${x+r},${y1} H${x+w-r} Q${x+w},${y1} ${x+w},${e} V${y0} Z`, fill: up?"var(--good)":"var(--crit-text)"})); });
+  svg.append(S_("line",{x1:L,x2:W-R,y1:y0,y2:y0,stroke:"var(--fg2)","stroke-width":1.5}));
+  svg.append(S_("text",{x:L-8,y:y0+4,"text-anchor":"end",class:"ax"},"0"));
+  if (endLabel){ const d=days[n-1], v=val(d), y=v?ys(v):y0; const halo="paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round;";
+    svg.append(S_("text",{x:Math.min(W-R, xs(n-1)+w/2), y: v>=0 ? y-6 : y+15, "text-anchor":"end", class:"lbl", style:halo},`${v>0?"+":v<0?"−":""}${nf.format(Math.abs(v))}`)); }
+  // hover: one hit area per day, wider than the bar
+  const hl=S_("rect",{x:0,y:T,width:bw,height:H-T-B,fill:"var(--fg2)",opacity:0}); svg.insertBefore(hl, svg.firstChild);
+  days.forEach((d,i)=>{ const h=S_("rect",{x:L+i*bw,y:T,width:bw,height:H-T-B,fill:"transparent"});
+    h.addEventListener("pointermove",ev=>{ hl.setAttribute("x",L+i*bw); hl.setAttribute("opacity",.07);
+      tip.replaceChildren(el("b",{text:fLong.format(d.d)}), ...tipLines(d).map(t=>el("div",{text:t}))); tip.hidden=false;
+      const cr=chart.getBoundingClientRect(); tip.style.left=Math.max(4,Math.min(ev.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(ev.clientY-cr.top+14)+"px"; });
+    h.addEventListener("pointerleave",()=>{ tip.hidden=true; hl.setAttribute("opacity",0); });
+    svg.append(h); });
+  host.append(svg);
 }
 function renderOrder(ph){
   const strip=$("strip"), cards=$("phases"); strip.replaceChildren(); cards.replaceChildren();
