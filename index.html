@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Barts Health ICT programme overview for the ICT Director, version 1.3 (5 Nov 2026).
+<!-- Barts Health ICT programme overview for the ICT Director, version 1.4 (5 Nov 2026).
      To add a programme, add an entry to PROGRAMMES in the script below.
      Put the Trust logo in this folder as barts-health-logo.png (or .svg / .jpg). -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.3">
+<meta name="version" content="1.4">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -157,7 +157,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.3 · 5 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.4 · 5 Nov 2026</span></p>
   </div>
 </div>
 
@@ -185,7 +185,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 <script>
 (() => {
 "use strict";
-const PAGE_VERSION = "1.3 · 5 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.4 · 5 Nov 2026"; // keep in step with the version text in the header
 
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
@@ -195,15 +195,14 @@ const RAG_RULES = { greenMaxDays: 5, amberMaxDays: 15, staleLogDays: 5 };
 
 /* The programmes on this page. To add one, copy an entry and change it.
    stage: "delivery" (rated and shown with figures), "planning" (shown, not rated yet) or "closed".
-   engine: which spreadsheet reader to use (only "wifi" exists so far). lead: optional name to show. */
+   engine: which spreadsheet reader to use ("wifi" or "printers", see SPECS below). lead: optional name to show. */
 const PROGRAMMES = [
   { title: "Wi-Fi access point refresh", stage: "delivery", lead: null,
     description: "Replacing wireless access points across all six sites, building by building.",
     link: "wifi.html", linkText: "Open the Wi-Fi dashboard", spreadsheet: "Barts_WiFi_Refresh_Planner.xlsx", engine: "wifi" },
-  { title: "Printer replacement", stage: "planning", lead: null,
-    description: "Replacing printers across the Trust's sites.",
-    next: "The dashboard will appear here once the printer list and plan are ready.",
-    link: null, spreadsheet: null, engine: null }
+  { title: "Printer replacement", stage: "delivery", lead: null,
+    description: "Replacing all 1,469 printers on the supplier's list, site by site and floor by floor, in the same site order as the Wi-Fi refresh.",
+    link: "printers.html", linkText: "Open the printer dashboard", spreadsheet: "Barts_Printer_Replacement_Planner.xlsx", engine: "printers" }
 ];
 
 const STAGE_TEXT = { delivery: "In delivery", planning: "In planning", closed: "Closed" };
@@ -244,7 +243,15 @@ const cellText = v => v==null ? "" : String(v).trim();
 /* ================= Wi-Fi programme =================
    The reading, scheduling and forecast rules below are the same as wifi.html, so both pages
    give the same dates. If you change them in one file, change them in the other. */
-function readWifiWorkbook(wb){
+/* How each programme's planner spreadsheet is laid out and what its units are called. Both planners have the same
+   structure; only the tab, column names and wording differ. */
+const SPECS = {
+  wifi:     { tab:"Buildings", areaCol:"building", listedCol:"rows in tracker", logCol:"aps installed", unit:"APs", done:"installed",
+              doneNoun:"installs", areas:"Buildings", trackerNote:"data problems in the site trackers" },
+  printers: { tab:"Areas", areaCol:"area", listedCol:"printers in list", logCol:"printers replaced", unit:"printers", done:"replaced",
+              doneNoun:"replacements", areas:"Areas", trackerNote:"data problems in the printer list" }
+};
+function readPlanWorkbook(wb, spec){
   const grid = name => wb.Sheets[name] ? XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null, blankrows:true}) : null;
   const findRow = (g, test) => { for (let i=0;i<Math.min(g.length,60);i++) if (test(g[i]||[])) return i; return -1; };
   const norm = s => cellText(s).toLowerCase().replace(/\s+/g," ");
@@ -265,20 +272,20 @@ function readWifiWorkbook(wb){
     newSiteDay: norm(byName("Set_NewDay","D12"))!=="no"
   };
   if (!settings.start) throw new Error("The start date is missing from the Order of Works tab.");
-  const gb = grid("Buildings"); if (!gb) throw new Error("The spreadsheet has no Buildings tab.");
-  const hr = findRow(gb, r => norm(r[0])==="order" && r.some(c=>norm(c)==="building"));
-  if (hr<0) throw new Error("Couldn't find the header row on the Buildings tab.");
+  const gb = grid(spec.tab); if (!gb) throw new Error(`The spreadsheet has no ${spec.tab} tab.`);
+  const hr = findRow(gb, r => norm(r[0])==="order" && r.some(c=>norm(c)===spec.areaCol));
+  if (hr<0) throw new Error(`Couldn't find the header row on the ${spec.tab} tab.`);
   const col = {}; (gb[hr]||[]).forEach((h,i)=>{ if (h!=null) col[norm(h)]=i; });
   const g = (r,k) => k in col ? r[col[k]] : null;
   const rows=[];
   for (let i=hr+1;i<gb.length;i++){
     const r=gb[i]||[]; const order=cellNum(g(r,"order")); if (order==null) continue;
-    const listed=cellNum(g(r,"rows in tracker"))||0, oos=cellNum(g(r,"out of scope"))||0, dup=cellNum(g(r,"duplicate rows"))||0;
-    rows.push({ id:"b"+i, order, phase:cellNum(g(r,"phase")), site:cellText(g(r,"site")), siteName:cellText(g(r,"site name")), building:cellText(g(r,"building")),
+    const listed=cellNum(g(r,spec.listedCol))||0, oos=cellNum(g(r,"out of scope"))||0, dup=cellNum(g(r,"duplicate rows"))||0;
+    rows.push({ id:"b"+i, order, phase:cellNum(g(r,"phase")), site:cellText(g(r,"site")), siteName:cellText(g(r,"site name")), building:cellText(g(r,spec.areaCol)),
       listed, oos, dup, aps:listed-oos-dup, fixedStart:cellDate(g(r,"fixed start")), fixedEnd:cellDate(g(r,"fixed end")), status:cellText(g(r,"status"))||"Not started" });
   }
   rows.sort((a,b)=>a.order-b.order);
-  if (!rows.length) throw new Error("No buildings found on the Buildings tab.");
+  if (!rows.length) throw new Error(`Nothing found on the ${spec.tab} tab.`);
   const phases = new Map(); let baselineName = "";
   const go = grid("Order of Works");
   if (go){
@@ -297,17 +304,17 @@ function readWifiWorkbook(wb){
   if (gi){ const h=findRow(gi, r=>norm(r[0])==="#" && norm(r[1])==="issue"); if (h>=0){ const hdr=(gi[h]||[]).map(norm);
     for (let i=h+1;i<gi.length;i++){ const r=gi[i]||[]; if (!cellText(r[1])) continue; const o={}; hdr.forEach((k,j)=>{ if (k) o[k]=cellText(r[j]); }); issues.push(o); } } }
   const log=[]; const gl = grid("Install Log");
-  if (gl){ const h=findRow(gl, r=>norm(r[0])==="date" && r.some(c=>norm(c).startsWith("aps installed")));
+  if (gl){ const h=findRow(gl, r=>norm(r[0])==="date" && r.some(c=>norm(c).startsWith(spec.logCol)));
     if (h>=0){ const hdr=(gl[h]||[]).map(norm); const ci=k=>hdr.findIndex(x=>x.startsWith(k));
-      const cd=ci("date"), cb=ci("building"), ca=ci("aps installed");
+      const cd=ci("date"), cb=ci(spec.areaCol), ca=ci(spec.logCol);
       for (let i=h+1;i<gl.length;i++){ const r=gl[i]||[]; const d=cellDate(r[cd]); const n=cellNum(r[ca]);
         if (d && n!=null && n>0) log.push({ date:d, building:cb>=0?cellText(r[cb]):"", aps:n }); } } }
   log.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
   return { rows, settings, phases, baselineName, nwd, issues, log };
 }
 
-function wifiStatus(wb){
-  const model = readWifiWorkbook(wb), s = model.settings;
+function planStatus(wb, spec){
+  const model = readPlanWorkbook(wb, spec), s = model.settings;
   const isWork = d => { const w=d.getDay(); return w>0 && w<6 && !model.nwd.has(iso(d)); };
   const nextWork = d => { let x=new Date(d); while(!isWork(x)) x=addDays(x,1); return x; };
   const workDays = (a,b) => { let n=0; for (let x=new Date(a); x<=b; x=addDays(x,1)) if (isWork(x)) n++; return n; };
@@ -403,10 +410,10 @@ function wifiStatus(wb){
   if (staleFlag && rag==="G") rag="A";
   const rel = d => d===0 ? `the same as the ${refName}` : `${plural(Math.abs(d),"working day")} ${d>0?"later":"earlier"} than the ${refName} (${fLong.format(parse(ref))})`;
   let reason;
-  if (complete) reason = `All ${nf.format(total)} APs are installed. The last were logged on ${fLong.format(lastLog)}.`;
+  if (complete) reason = `All ${nf.format(total)} ${spec.unit} are ${spec.done}. The last were logged on ${fLong.format(lastLog)}.`;
   else if (basis==="forecast") reason = `Forecast to finish on ${fLong.format(parse(fcIso))} at the recent install pace, ${rel(slip)}.`;
-  else reason = `No installs logged yet. Planned to finish on ${fLong.format(parse(fcIso))}, ${rel(slip)}.`;
-  if (staleFlag) reason += ` Nothing has been logged for ${plural(stale,"working day")} that had installs planned, so these figures may be out of date.`;
+  else reason = `No ${spec.doneNoun} logged yet. Planned to finish on ${fLong.format(parse(fcIso))}, ${rel(slip)}.`;
+  if (staleFlag) reason += ` Nothing has been logged for ${plural(stale,"working day")} that had ${spec.doneNoun} planned, so these figures may be out of date.`;
 
   const t=iso(TODAY);
   const cur = ph.find(p=>p.start && p.end && p.start<=t && p.end>=t);
@@ -417,7 +424,7 @@ function wifiStatus(wb){
   const doneB = ph.reduce((a,p)=>a+p.done,0), allB = ph.reduce((a,p)=>a+p.buildings,0);
 
   return {
-    unit:"APs", rag, reason, basis, complete, total, installed, plannedToDate, asOf, lastLog, varDays, paceRatio,
+    unit:spec.unit, spec, rag, reason, basis, complete, total, installed, plannedToDate, asOf, lastLog, varDays, paceRatio,
     planFin, baseFin, fcIso, slip, refName, stale, staleFlag,
     buildings: allB, buildingsDone: doneB,
     issuesOpen: model.issues.filter(i=>!closedRx.test(i.status||"")).length, issuesTotal: model.issues.length,
@@ -425,7 +432,7 @@ function wifiStatus(wb){
     firstInstall: pStart
   };
 }
-const ENGINES = { wifi: wifiStatus };
+const ENGINES = { wifi: wb=>planStatus(wb, SPECS.wifi), printers: wb=>planStatus(wb, SPECS.printers) };
 
 /* ================= page ================= */
 async function loadStatus(p){
@@ -445,11 +452,11 @@ function ragBadge(r, big, text){
 function againstPlan(st){
   if (st.complete) return { v:"Complete", s:`finished ${fLong.format(st.lastLog)}` };
   if (st.installed===0) return st.plannedToDate>0
-    ? { v:"Behind plan", s:`${nf.format(st.plannedToDate)} APs planned by ${fShort.format(st.asOf)}, none logged`, later:true }
-    : { v:"Not started", s:`first installs ${fLong.format(st.firstInstall)}` };
+    ? { v:"Behind plan", s:`${nf.format(st.plannedToDate)} ${st.unit} planned by ${fShort.format(st.asOf)}, none logged`, later:true }
+    : { v:"Not started", s:`first ${st.spec.doneNoun} ${fLong.format(st.firstInstall)}` };
   const diff=st.installed-st.plannedToDate, d=st.varDays;
   const v = diff===0 ? "On plan" : d ? `${plural(Math.abs(d),"working day")} ${d>0?"ahead":"behind"}` : `Less than a day ${diff>0?"ahead":"behind"}`;
-  const s = diff===0 ? `installs match the plan as of ${fShort.format(st.asOf)}` : `${diff>0?"+":"−"}${nf.format(Math.abs(Math.round(diff)))} APs against plan, as of ${fShort.format(st.asOf)}`;
+  const s = diff===0 ? `${st.spec.doneNoun} match the plan as of ${fShort.format(st.asOf)}` : `${diff>0?"+":"−"}${nf.format(Math.abs(Math.round(diff)))} ${st.unit} against plan, as of ${fShort.format(st.asOf)}`;
   return { v, s, later: diff<0 && d<0 };
 }
 
@@ -473,7 +480,7 @@ function renderTiles(results){
     if (!r.st){ parts.push(`${r.p.title}: figures aren't available right now.`); continue; }
     const st=r.st, pc=st.total?Math.round(st.installed/st.total*100):0;
     const fin = st.complete ? "complete" : `${st.basis==="forecast"?"forecast":"planned"} to finish ${fLong.format(parse(st.fcIso))}${st.slip===0?`, in line with the ${st.refName}`:`, ${plural(Math.abs(st.slip),"working day")} ${st.slip>0?"later":"earlier"} than the ${st.refName}`}`;
-    parts.push(`${r.p.title} is ${RAG_TEXT[st.rag].toLowerCase()}: ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit} installed (${pc}%), ${fin}.`);
+    parts.push(`${r.p.title} is ${RAG_TEXT[st.rag].toLowerCase()}: ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit} ${st.spec.done} (${pc}%), ${fin}.`);
   }
   $("headline").textContent = parts.join(" ");
 }
@@ -488,8 +495,8 @@ function renderStrip(st, card){
   const area=el("div",{class:"sch-area"}), track=el("div",{class:"sch-track"}), labels=el("div",{class:"sch-labels","aria-hidden":"true"});
   for (const p of ph){
     const a=parse(p.start), b=parse(p.end), l=x(a), w=x(addDays(b,1))-l;
-    const seg=el("div",{class:"seg",tabindex:"0",role:"img",style:`--c:var(${SITE_COLOURS[p.site]||"--rag-n"});left:${l}%;width:${w}%`,"aria-label":`Phase ${p.no}, ${p.label}: ${range(a,b)}, ${nf.format(p.aps)} APs`});
-    seg.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(a,b), `${nf.format(p.aps)} APs · ${plural(p.buildings,"building")}`, `${p.done} of ${p.buildings} complete`]});
+    const seg=el("div",{class:"seg",tabindex:"0",role:"img",style:`--c:var(${SITE_COLOURS[p.site]||"--rag-n"});left:${l}%;width:${w}%`,"aria-label":`Phase ${p.no}, ${p.label}: ${range(a,b)}, ${nf.format(p.aps)} ${st.unit}`});
+    seg.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(a,b), `${nf.format(p.aps)} ${st.unit} · ${plural(p.buildings, st.spec.areas.toLowerCase().replace(/s$/,""))}`, `${p.done} of ${p.buildings} complete`]});
     track.append(seg);
     if (w>=10) labels.append(el("span",{style:`left:${l}%`,text:`${p.no} ${p.site}`}));
   }
@@ -541,9 +548,9 @@ function renderProgramme({p, st, error}, i){
 
   const pc=st.total?st.installed/st.total:0, pp=st.total?st.plannedToDate/st.total:0;
   card.append(el("div",{class:"pbar"},
-    el("div",{class:"track",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.round(pc*100)),"aria-label":`${p.title}: ${Math.round(pc*100)}% installed`},
+    el("div",{class:"track",role:"progressbar","aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":String(Math.round(pc*100)),"aria-label":`${p.title}: ${Math.round(pc*100)}% ${st.spec.done}`},
       el("i",{class:"done",style:`width:${Math.min(100,pc*100)}%`}), el("b",{class:"plan",style:`left:${Math.min(100,pp*100)}%`,title:`Planned by ${fShort.format(st.asOf)}`})),
-    el("div",{class:"pbar-label"}, el("span",{text:`${Math.round(pc*100)}% installed · ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit}`}),
+    el("div",{class:"pbar-label"}, el("span",{text:`${Math.round(pc*100)}% ${st.spec.done} · ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit}`}),
       el("span",{class:"pk"}, el("i",{"aria-hidden":"true"}), `Planned by ${fShort.format(st.asOf)}: ${nf.format(Math.round(st.plannedToDate))}`))));
 
   const ap=againstPlan(st);
@@ -556,14 +563,14 @@ function renderProgramme({p, st, error}, i){
     ["Against plan", ap.v, ap.s, ap.later],
     [st.basis==="forecast"?"Forecast finish":st.complete?"Finished":"Planned finish", st.complete?fLong.format(st.lastLog):fLong.format(parse(st.fcIso)), st.complete?null:fcRel, st.slip>RAG_RULES.greenMaxDays],
     [`${st.refName[0].toUpperCase()+st.refName.slice(1)} finish`, st.baseFin?fLong.format(parse(st.baseFin)):"–", "the date the programme is measured against"],
-    ["Buildings complete", `${st.buildingsDone} of ${st.buildings}`, null],
+    [`${st.spec.areas} complete`, `${st.buildingsDone} of ${st.buildings}`, null],
     ["Planned now", now, nowSub],
     ["Next milestone", st.nextMs?fLong.format(parse(st.nextMs.end)):"–", st.nextMs?`${st.nextMs.label} complete (planned)`:null],
-    ["Open tracker issues", String(st.issuesOpen), st.issuesTotal>st.issuesOpen?`${st.issuesTotal-st.issuesOpen} closed`:"data problems in the site trackers"]
+    ["Open tracker issues", String(st.issuesOpen), st.issuesTotal>st.issuesOpen?`${st.issuesTotal-st.issuesOpen} closed`:st.spec.trackerNote]
   ];
   card.append(el("dl",{class:"metrics"}, ...items.map(([k,v,s,later])=>el("div",{}, el("dt",{text:k}), el("dd",{class:later?"later":null}, v, s?el("small",{text:s}):null)))));
   const strip=renderStrip(st, card); if (strip) card.append(strip);
-  const fresh=[st.lastLog?`Figures as of ${fLong.format(st.asOf)}, the last day in the Install Log`:`No installs in the Install Log yet`, st.updated?`spreadsheet updated ${fStamp.format(st.updated)}`:null].filter(Boolean).join(" · ")+".";
+  const fresh=[st.lastLog?`Figures as of ${fLong.format(st.asOf)}, the last day in the Install Log`:`No ${st.spec.doneNoun} in the Install Log yet`, st.updated?`spreadsheet updated ${fStamp.format(st.updated)}`:null].filter(Boolean).join(" · ")+".";
   card.append(el("div",{class:"prog-foot"}, p.link?el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"}):null, el("span",{class:"fresh",text:fresh})));
   return card;
 }
@@ -572,9 +579,9 @@ function renderRules(){
   const R=RAG_RULES, ul=$("rules"); ul.replaceChildren();
   const li=(r,t)=>ul.append(el("li",{}, ragBadge(r), el("span",{text:t})));
   li("G", `Forecast finish is no more than ${plural(R.greenMaxDays,"working day")} after the baseline finish.`);
-  li("A", `Forecast finish is ${R.greenMaxDays+1} to ${R.amberMaxDays} working days after the baseline, or nothing has been logged for more than ${plural(R.staleLogDays,"working day")} that had installs planned.`);
+  li("A", `Forecast finish is ${R.greenMaxDays+1} to ${R.amberMaxDays} working days after the baseline, or nothing has been logged for more than ${plural(R.staleLogDays,"working day")} that had work planned.`);
   li("R", `Forecast finish is more than ${plural(R.amberMaxDays,"working day")} after the baseline.`);
-  $("rulesNote").textContent = "The forecast takes what has actually been installed and runs the rest of the plan at the pace achieved over the last 10 working days that had installs planned or logged, the same as on each programme's dashboard. Until anything is logged, the planned finish is used. Programmes in planning aren't rated.";
+  $("rulesNote").textContent = "The forecast takes what the Install Log says has actually been done and runs the rest of the plan at the pace achieved over the last 10 working days that had work planned or logged, the same as on each programme's dashboard. Until anything is logged, the planned finish is used. Programmes in planning aren't rated.";
 }
 function renderFoot(){
   const f=$("foot"); f.replaceChildren();

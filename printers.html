@@ -1,0 +1,827 @@
+<!doctype html>
+<!-- Barts Printer Replacement Planner page, version 1.0 (5 Nov 2026). Built from the Wi-Fi planner page (1.8) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
+     Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="version" content="1.0">
+<title>Printer Replacement Planner</title>
+<meta name="description" content="Order of works and dates for the Barts Health printer replacement, read from the planner spreadsheet.">
+<!-- SheetJS reads the .xlsx file in the browser -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+/* Layout: a programme board. Settings and finish first, then order of works, timeline and the building list.
+   Colours are from the NHS identity guidelines (NHS Blue and white dominant); Arial is the NHS substitute for Frutiger. */
+:root{
+  color-scheme:light;
+  --nhs-blue:#005EB8; --nhs-dark-blue:#003087; --white:#FFFFFF;
+  --bg:#F0F4F5; --surface:#FFFFFF; --raised:#FFFFFF; --fg:#212B32; --fg2:#425563; --muted:#4C6272;
+  --line:#D8DDE0; --line-strong:#AEB7BD; --accent:#005EB8; --accent-fg:#FFFFFF;
+  --s-rlh:#005EB8; --s-meh:#ED8B00; --s-sbh:#00A499; --s-rs:#AE2573; --s-nuh:#41B6E6; --s-wch:#78BE20;
+  --good:#007F3B; --good-text:#007F3B; --warn:#FFB81C; --warn-text:#7A4E00; --crit-text:#D5281B; --today:#D5281B;
+  --f-display:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-body:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-mono:Arial,"Helvetica Neue",Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--f-body)}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 16px 64px;display:grid;gap:24px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,4.4vw,40px);line-height:1.12}
+h2{font-size:22px}
+.eyebrow{font-weight:700;font-size:16px;margin:0}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #FFEB3B;outline-offset:0;box-shadow:0 0 0 6px #212B32}
+/* Trust header: white, logo top right, then an NHS Blue title band */
+.nhs-header{background:var(--white);border-bottom:1px solid var(--line)}
+.hdr{max-width:1240px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:80px}
+.service{font-size:19px;font-weight:700;color:var(--nhs-blue);text-decoration:none;line-height:1.25}
+.service:hover{color:var(--nhs-dark-blue)}
+.logo{display:block;height:56px;width:auto;max-width:min(340px,52vw);object-fit:contain}
+.logo-text{font-weight:700;font-size:17px;line-height:1.2;text-align:right;color:var(--fg)}
+header.top{background:var(--nhs-blue);color:var(--white)}
+.top-inner{max-width:1240px;margin:0 auto;padding:22px 16px 28px;display:grid;gap:10px}
+.sub{margin:0;max-width:75ch;font-size:17px}
+.source{font-size:14px}
+.back{font-size:15px;color:var(--white);font-weight:700;justify-self:start}
+.back:hover{color:var(--white);text-decoration-thickness:3px}
+.ver{display:inline-block;font-size:13px;line-height:1.3;color:var(--white);border:1px solid var(--white);border-radius:4px;padding:2px 7px;justify-self:start}
+@media (max-width:560px){ .logo{height:42px} .service{font-size:17px} .hdr{min-height:68px} }
+.figures-panel{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--nhs-blue);border-radius:4px;padding:18px 20px;display:grid;gap:12px}
+.figures{display:flex;flex-wrap:wrap;gap:8px 32px}
+.fig{display:grid;gap:2px}
+.fig b{font:600 24px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.fig span{font-size:12.5px;color:var(--muted)}
+.banner{border:1px solid var(--line-strong);background:var(--raised);padding:10px 14px;border-radius:6px;color:var(--fg2);font-size:14px}
+.banner.warn{border-color:var(--warn)}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px;display:grid;gap:16px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.panel-head p{margin:0;color:var(--muted);font-size:13.5px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 12.5px/1 var(--f-mono);color:var(--fg2);white-space:nowrap}
+.chip::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+
+/* loader */
+.loader{display:grid;gap:12px;justify-items:start;border:1px dashed var(--line-strong);border-radius:4px;padding:28px 20px;background:var(--surface)}
+.loader b{font-family:var(--f-display);font-size:18px}
+.btn{border:1px solid var(--line-strong);background:var(--raised);border-radius:4px;padding:8px 16px;min-height:44px;cursor:pointer;font-weight:700}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);box-shadow:0 4px 0 var(--nhs-dark-blue)}
+.btn.primary:hover{background:var(--nhs-dark-blue)}
+.drop.over{outline:2px dashed var(--accent);outline-offset:4px}
+
+/* order of works */
+.strip{display:flex;gap:2px;height:30px;border-radius:5px;overflow:hidden}
+.strip .seg{min-width:4px;background:var(--c);cursor:default}
+.phases{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.phase{border:1px solid var(--line);background:var(--raised);border-radius:6px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+.phase .ph-top{display:flex;align-items:center;gap:10px}
+.phase .no{font:600 22px/1 var(--f-display);color:var(--fg2);min-width:1.1em}
+.phase .name{font-weight:600;line-height:1.3}
+.phase dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.phase dt{color:var(--muted)} .phase dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* planned vs actual */
+#progFigs .fig b{font-size:21px}
+#progFigs .fig b.later{color:var(--crit-text)} #progFigs .fig b.earlier{color:var(--good-text)}
+.key{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--fg2)}
+.key svg{flex:none}
+
+/* install time */
+.wi{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 28px;align-items:start}
+@media (max-width:860px){ .wi{grid-template-columns:minmax(0,1fr)} }
+.wi-ctrl{display:grid;gap:10px;grid-column:1/-1}
+.wi-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.wi-row label{font-size:14px;color:var(--fg2)}
+.wi-row select{background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:6px 8px;min-height:38px;font-weight:600;min-width:11ch;cursor:pointer}
+.wi-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.wi-head b{font:600 26px/1.1 var(--f-display)}
+.delta{font-weight:600;font-size:14px}
+.delta[data-dir="later"]{color:var(--crit-text)} .delta[data-dir="earlier"]{color:var(--good-text)} .delta[data-dir="same"]{color:var(--muted)}
+table.mini{border-collapse:collapse;width:100%;font-size:13px}
+.mini th,.mini td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.mini td.ph{white-space:normal;min-width:150px}
+.mini thead th{font:700 13px/1.3 var(--f-body);color:var(--fg);border-bottom:2px solid var(--line-strong)}
+.mini td.n,.mini th.n{text-align:right;font-variant-numeric:tabular-nums}
+.mini td.later{color:var(--crit-text);font-weight:600} .mini td.earlier{color:var(--good-text);font-weight:600}
+.chart{position:relative;min-width:0}
+.chart h3{font-size:14px;margin:0 0 6px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.ax{font:500 11px var(--f-mono);fill:var(--muted)}
+.lbl{font:600 11.5px var(--f-body);fill:var(--fg)}
+
+/* timeline */
+.tl-scroll{overflow-x:auto;position:relative}
+.tl{min-width:780px;position:relative;--label:260px}
+.tl-axis,.tl-row{display:grid;grid-template-columns:var(--label) 1fr}
+.tl-axis{height:28px;border-bottom:1px solid var(--line-strong)}
+.tl-track{position:relative;min-width:0}
+.tl-axis .tick{position:absolute;top:6px;font:500 11.5px/1 var(--f-mono);color:var(--muted);white-space:nowrap;transform:translateX(4px)}
+.tl-grid{position:absolute;inset:0 0 0 var(--label);pointer-events:none}
+.tl-grid .gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.tl-grid .gl.month{background:var(--line-strong)}
+.tl-grid .today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:1}
+.tl-grid .today span,.tl-grid .brk span{position:absolute;top:-1px;left:4px;font:500 11px/1 var(--f-mono);background:var(--surface);padding:2px 3px;white-space:nowrap}
+.tl-grid .today span{color:var(--today)}
+.tl-grid .brk{position:absolute;top:0;bottom:0;z-index:1;border-left:1px dashed var(--line-strong);border-right:1px dashed var(--line-strong);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 22%,transparent) 0 4px,transparent 4px 9px)}
+.tl-grid .brk span{color:var(--fg2)}
+.tl-row{height:26px;align-items:center}
+.tl-row .lbl2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;display:flex;align-items:center;gap:8px}
+.tl-row.ph{height:30px;margin-top:6px}
+.tl-row.ph .lbl2{font-weight:600;font-family:var(--f-display);font-size:14px}
+.bar{position:absolute;top:6px;height:14px;background:var(--c);border-radius:4px;min-width:4px}
+.bar.span{top:9px;height:8px;background:color-mix(in srgb,var(--c) 30%,transparent);border-radius:3px}
+.bar.fixed{background-image:repeating-linear-gradient(90deg,transparent 0 6px,rgba(255,255,255,.35) 6px 8px)}
+.tip{position:absolute;z-index:10;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:180px;max-width:280px}
+.tip b{display:block;font-size:13.5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* area table */
+.sched td.models{font-size:12.5px;color:var(--fg2);min-width:180px;max-width:280px}
+.sched td:nth-child(2){min-width:200px}
+.tbl-scroll{overflow-x:auto}
+table.sched{width:100%;border-collapse:collapse;min-width:980px;font-size:13.5px}
+.sched th,.sched td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.sched thead th{font:700 13.5px/1.3 var(--f-body);color:var(--fg);border-bottom:2px solid var(--line-strong);white-space:nowrap}
+.sched td.n,.sched th.n{text-align:right;font-variant-numeric:tabular-nums}
+.sched td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+.sched tr.grp th{background:var(--bg);font:600 14.5px/1.3 var(--f-display);color:var(--fg);text-transform:none;letter-spacing:0;padding:10px 8px}
+.sched tr.grp .meta{font:400 12.5px var(--f-body);color:var(--muted);margin-left:10px}
+.sched .bname{font-weight:500}
+.sched .floors{font:400 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+.sched tr.oos td{color:var(--muted)} .sched tr.oos .bname{text-decoration:line-through}
+.tag{display:inline-block;font:500 11px/1 var(--f-mono);letter-spacing:.04em;border:1px solid var(--line-strong);border-radius:3px;padding:2px 5px;color:var(--fg2);margin-left:6px;vertical-align:1px}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.st i{font-style:normal;width:16px;height:16px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:700;border:1.5px solid var(--line-strong);color:var(--muted);flex:none}
+.st[data-s="Scheduled"] i{border-color:var(--accent);color:var(--accent)}
+.st[data-s="In progress"] i{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}
+.st[data-s="Complete"] i{border-color:var(--good);background:var(--good);color:#fff}
+.st[data-s="On hold"] i{border-color:var(--warn);background:var(--warn);color:#3a2700}
+.issues{color:var(--warn-text);font-weight:600}
+
+details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:18px}
+.iss-list{display:grid;gap:12px;margin-top:12px}
+.iss-item{border:1px solid var(--line);border-radius:6px;background:var(--raised);padding:12px 14px;display:grid;gap:4px;font-size:14px}
+.iss-item b{font-size:15px}
+.foot{font-size:13px;color:var(--muted);display:grid;gap:6px}
+.foot p{margin:0;max-width:95ch}
+.linkbtn{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+@media (max-width:560px){ .tl{--label:150px} .figures{gap:8px 20px} }
+@media (prefers-reduced-motion: no-preference){ .bar{transition:left .2s ease,width .2s ease} }
+</style>
+</head>
+<body>
+<div class="nhs-header">
+  <div class="hdr">
+    <a class="service" href="index.html">ICT Programme Dashboard</a>
+    <span>
+      <img class="logo" id="logo" alt="Barts Health NHS Trust" hidden>
+      <span class="logo-text" id="logoText" hidden>Barts Health NHS Trust</span>
+    </span>
+  </div>
+</div>
+<header class="top">
+  <div class="top-inner">
+    <a class="back" href="index.html">← All programmes</a>
+    <p class="eyebrow">ICT programme</p>
+    <h1>Printer replacement</h1>
+    <p class="sub">Every site, building and floor in the printer replacement, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
+    <div class="source" id="source"></div>
+    <span class="ver" id="ver">Page version 1.0 · 5 Nov 2026</span>
+  </div>
+</header>
+<div class="wrap">
+
+  <div class="loader drop" id="loader">
+    <b id="loaderTitle">Loading the planner spreadsheet…</b>
+    <span id="loaderText" class="muted"></span>
+    <div id="loaderPick" hidden>
+      <input type="file" id="pick" accept=".xlsx" hidden>
+      <button class="btn primary" type="button" id="pickBtn">Choose the spreadsheet</button>
+      <span class="hint">or drag it onto this box</span>
+    </div>
+  </div>
+
+  <main id="main" hidden style="display:grid;gap:24px">
+    <div class="figures-panel">
+      <div class="figures" id="figures" aria-live="polite"></div>
+      <div class="banner" id="banner" hidden></div>
+    </div>
+    <section class="panel" aria-labelledby="h-order">
+      <div class="panel-head">
+        <h2 id="h-order">Order of works</h2>
+        <p>Bar widths are proportional to the number of printers in each phase.</p>
+      </div>
+      <div class="strip" id="strip" role="img" aria-label="Phases sized by printer count"></div>
+      <div class="phases" id="phases"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-prog">
+      <div class="panel-head">
+        <h2 id="h-prog">Planned vs actual</h2>
+        <p>Printers replaced over time. The actual line comes from the Install Log tab in the spreadsheet.</p>
+      </div>
+      <div class="figures" id="progFigs"></div>
+      <div class="chart" id="progChart"><div id="progSvg"></div><div class="tip" id="progTip" hidden></div></div>
+      <div class="legend" id="progLegend"></div>
+      <p class="hint" id="progNote"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-wi">
+      <div class="panel-head">
+        <h2 id="h-wi">Time per printer</h2>
+        <p>Pick the minutes per printer to see how the dates move. This page doesn't change the spreadsheet.</p>
+      </div>
+      <div class="wi">
+        <div class="wi-ctrl">
+          <div class="wi-row">
+            <label for="minsSel">Minutes per printer</label>
+            <select id="minsSel"></select>
+            <span class="hint" id="minsNote"></span>
+          </div>
+          <div class="wi-head" aria-live="polite"><span class="muted">Finish</span><b class="num" id="finish">–</b><span class="delta" id="delta"></span></div>
+          <p class="hint" id="basis"></p>
+        </div>
+        <div class="chart" id="chart"><h3>Finish date by minutes per printer</h3><div id="chartSvg"></div><div class="tip" id="chartTip" hidden></div></div>
+        <div style="overflow-x:auto;min-width:0"><table class="mini" id="phaseTable"></table></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-tl">
+      <div class="panel-head">
+        <h2 id="h-tl">Timeline</h2>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="tl-scroll" id="tlScroll">
+        <div id="timeline"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-b">
+      <div class="panel-head">
+        <h2 id="h-b">Areas</h2>
+        <p id="bNote"></p>
+      </div>
+      <div class="tbl-scroll"><table class="sched" id="sched"></table></div>
+    </section>
+
+    <section class="panel" id="issuesPanel" hidden>
+      <details class="iss">
+        <summary id="issSummary">Issues in the printer list</summary>
+        <div class="iss-list" id="issList"></div>
+      </details>
+    </section>
+
+    <div class="foot" id="foot"></div>
+  </main>
+</div>
+
+<script>
+(() => {
+"use strict";
+// The spreadsheet this page reads. Keep it in the same folder as this page.
+const XLSX_FILE = "Barts_Printer_Replacement_Planner.xlsx";
+const PAGE_VERSION = "1.0 · 5 Nov 2026";
+// The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
+const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
+
+const SITE_COLOURS = { RLH:"--s-rlh", MEH:"--s-meh", SBH:"--s-sbh", RS:"--s-rs", NUH:"--s-nuh", WCH:"--s-wch" };
+const MIN_STEPS = [5,10,15,20,25,30,35,40,45,50,55,60];
+const STATUS_ICON = {"Not started":"", "Scheduled":"•", "In progress":"▶", "Complete":"✓", "On hold":"‖", "Out of scope":"–"};
+
+const $ = id => document.getElementById(id);
+const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (v==null||v===false) continue; if (k==="class") e.className=v; else if (k==="text") e.textContent=v; else e.setAttribute(k,v); } for (const k of kids) if (k!=null) e.append(k); return e; };
+const pad = n => String(n).padStart(2,"0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const fLong = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const fShort = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short"});
+const fMonth = new Intl.DateTimeFormat("en-GB",{month:"short",year:"2-digit"});
+const fStamp = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const nf = new Intl.NumberFormat("en-GB");
+const maxIso = list => list.length ? list.reduce((a,b)=>a>b?a:b) : null;
+const minIso = list => list.length ? list.reduce((a,b)=>a<b?a:b) : null;
+const range = (a,b) => !a||!b ? "–" : (a.getFullYear()===b.getFullYear() ? fShort.format(a) : fLong.format(a)) + " – " + fLong.format(b);
+const siteVar = s => `var(${SITE_COLOURS[s]||"--muted"})`;
+const shortName = r => r.building.replace(new RegExp("^"+r.site+"\\s+"), "");
+
+// Excel stores dates as serial numbers; convert without timezone drift
+function cellDate(v){
+  if (v==null || v==="") return null;
+  if (typeof v==="number" && isFinite(v)) { const d=new Date(Math.round((v-25569)*86400000)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
+  if (v instanceof Date) return iso(v);
+  const s=String(v).trim(); let m;
+  if ((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+  if ((m=s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+const cellNum = v => { const n = typeof v==="number" ? v : Number(String(v??"").trim()); return v!=null && v!=="" && isFinite(n) ? n : null; };
+const cellText = v => v==null ? "" : String(v).trim();
+
+let model = null, mins = 15;
+
+/* ---------------- reading the workbook ---------------- */
+function readWorkbook(wb, source){
+  const grid = name => wb.Sheets[name] ? XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null, blankrows:true}) : null;
+  const findRow = (g, test) => { for (let i=0;i<Math.min(g.length,60);i++) if (test(g[i]||[])) return i; return -1; };
+  const norm = s => cellText(s).toLowerCase().replace(/\s+/g," ");
+
+  // Settings: by defined name, falling back to the cells they were built in
+  const names = (wb.Workbook && wb.Workbook.Names) || [];
+  const byName = (n, addr) => {
+    const def = names.find(d => d.Name===n);
+    let sheet="Order of Works", a=addr;
+    if (def && def.Ref){ const m=def.Ref.match(/^'?(.+?)'?!\$?([A-Z]+)\$?(\d+)$/); if (m){ sheet=m[1]; a=m[2]+m[3]; } }
+    const ws=wb.Sheets[sheet]; const c=ws && ws[a]; return c ? c.v : null;
+  };
+  const settings = {
+    start: cellDate(byName("Set_Start","D6")),
+    mins: cellNum(byName("Set_Mins","D7")) || 15,
+    hours: cellNum(byName("Set_Hours","D8")) || 7,
+    teams1: cellNum(byName("Set_Teams","D9")) || 1,
+    teams2: cellNum(byName("Set_Teams2","D10")),
+    from2: cellDate(byName("Set_From2","D11")),
+    newSiteDay: norm(byName("Set_NewDay","D12"))!=="no"
+  };
+  if (!settings.start) throw new Error("The start date is missing from the Order of Works tab.");
+
+  // Buildings
+  const gb = grid("Areas"); if (!gb) throw new Error("The spreadsheet has no Areas tab.");
+  const hr = findRow(gb, r => norm(r[0])==="order" && r.some(c=>norm(c)==="area"));
+  if (hr<0) throw new Error("Couldn't find the header row on the Areas tab.");
+  const col = {}; (gb[hr]||[]).forEach((h,i)=>{ if (h!=null) col[norm(h)]=i; });
+  const need = ["order","phase","site","area","printers in list","out of scope","duplicate rows","fixed start","fixed end","status"];
+  const missing = need.filter(k=>!(k in col));
+  if (missing.length) throw new Error("The Areas tab is missing these columns: "+missing.join(", ")+".");
+  const g = (r,k) => k in col ? r[col[k]] : null;
+  const rows=[];
+  for (let i=hr+1;i<gb.length;i++){
+    const r=gb[i]||[]; const order=cellNum(g(r,"order")); if (order==null) continue;
+    const listed=cellNum(g(r,"printers in list"))||0, oos=cellNum(g(r,"out of scope"))||0, dup=cellNum(g(r,"duplicate rows"))||0;
+    rows.push({ id:"b"+i, order, phase:cellNum(g(r,"phase")), site:cellText(g(r,"site")), siteName:cellText(g(r,"site name")), building:cellText(g(r,"area")),
+      floors:cellText(g(r,"floors")), listed, oos, dup, aps:listed-oos-dup, pre:0, models:cellText(g(r,"models")),
+      fixedStart:cellDate(g(r,"fixed start")), fixedEnd:cellDate(g(r,"fixed end")), status:cellText(g(r,"status"))||"Not started", notes:cellText(g(r,"notes")) });
+  }
+  rows.sort((a,b)=>a.order-b.order);
+  if (!rows.length) throw new Error("No areas found on the Areas tab.");
+
+  // Phase names and the baseline plan from the Order of Works table
+  const phases = new Map(); let baselineName = "";
+  const go = grid("Order of Works");
+  if (go){
+    const ph = findRow(go, r => norm(r[0])==="phase" && norm(r[2])==="what");
+    if (ph>=0){
+      const hdr = go[ph]||[]; const bcol = hdr.findIndex(h=>/(plan|baseline) end/i.test(cellText(h)));
+      if (bcol>=0) baselineName = cellText(hdr[bcol]).replace(/\s*end\b/i,"");
+      for (let i=ph+1;i<go.length;i++){ const r=go[i]||[]; const no=cellNum(r[0]); if (no==null) break;
+        phases.set(no, { no, site:cellText(r[1]), label:cellText(r[2]), baseline: bcol>=0 ? cellDate(r[bcol]) : null }); }
+    }
+  }
+  for (const r of rows) if (!phases.has(r.phase)) phases.set(r.phase, { no:r.phase, site:r.site, label:r.siteName||r.site, baseline:null });
+
+  // Non-working days
+  const nwd = new Map(); const gn = grid("Non-Working Days");
+  if (gn){ const h=findRow(gn, r=>norm(r[0])==="date"); for (let i=h+1;i<gn.length && h>=0;i++){ const r=gn[i]||[]; const d=cellDate(r[0]); if (d) nwd.set(d, cellText(r[1])); } }
+
+  // Tracker issues
+  const issues=[]; const gi = grid("Tracker Issues");
+  if (gi){ const h=findRow(gi, r=>norm(r[0])==="#" && norm(r[1])==="issue"); if (h>=0){ const hdr=(gi[h]||[]).map(norm);
+    for (let i=h+1;i<gi.length;i++){ const r=gi[i]||[]; if (!cellText(r[1])) continue; const o={}; hdr.forEach((k,j)=>{ if (k) o[k]=cellText(r[j]); }); issues.push(o); } } }
+
+  // Install log: printers actually replaced, one row per area per day
+  const log=[]; const gl = grid("Install Log");
+  if (gl){ const h=findRow(gl, r=>norm(r[0])==="date" && r.some(c=>norm(c).startsWith("printers replaced")));
+    if (h>=0){ const hdr=(gl[h]||[]).map(norm); const ci=k=>hdr.findIndex(x=>x.startsWith(k));
+      const cd=ci("date"), cb=ci("area"), ca=ci("printers replaced"), cn=ci("notes");
+      for (let i=h+1;i<gl.length;i++){ const r=gl[i]||[]; const d=cellDate(r[cd]); const n=cellNum(r[ca]);
+        if (d && n!=null && n>0) log.push({ date:d, building:cb>=0?cellText(r[cb]):"", aps:n, notes:cn>=0?cellText(r[cn]):"" }); } } }
+  log.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+
+  return { rows, settings, phases, baselineName, nwd, issues, log, source };
+}
+
+/* ---------------- working days and the schedule ---------------- */
+const isWork = d => { const w=d.getDay(); return w>0 && w<6 && !model.nwd.has(iso(d)); };
+const nextWork = d => { let x=new Date(d); while(!isWork(x)) x=addDays(x,1); return x; };
+const workDays = (a,b) => { let n=0; for (let x=new Date(a); x<=b; x=addDays(x,1)) if (isWork(x)) n++; return n; };
+const wdDiff = (a,b) => b>=a ? workDays(a,b)-1 : -(workDays(b,a)-1);
+const signed = n => n>0 ? `+${n}` : n<0 ? `−${-n}` : "0";
+const isFixed = r => !!(r.fixedStart && r.fixedEnd);
+const inScope = r => r.aps>0 && r.status!=="Out of scope";
+
+// Same rules as the spreadsheet's formulas
+function computePlan(m){
+  const s=model.settings;
+  const perDay = t => Math.max(1, Math.floor(t*s.hours*60/m));
+  const cap = d => perDay(s.teams2!=null && s.from2 && iso(d)>=s.from2 ? s.teams2 : s.teams1);
+  let start=parse(s.start);
+  const fixedEnds=model.rows.filter(r=>r.status==="Complete").map(r=>r.fixedEnd).filter(Boolean); // the rest start after the last completed building; other fixed dates run alongside
+  if (fixedEnds.length){ const after=nextWork(addDays(parse(maxIso(fixedEnds)),1)); if (after>start) start=after; }
+  let day=nextWork(start), used=0, prev=null;
+  const next=()=>{ day=nextWork(addDays(day,1)); used=0; };
+  const out=new Map(), daily=new Map();
+  const addDay=(d,n)=>{ const k=iso(d); daily.set(k,(daily.get(k)||0)+n); };
+  for (const r of model.rows){
+    if (isFixed(r)) { out.set(r.id,{start:r.fixedStart,end:r.fixedEnd,fixed:true});
+      if (inScope(r)){ const ds=[]; for (let x=parse(r.fixedStart); x<=parse(r.fixedEnd); x=addDays(x,1)) if (isWork(x)) ds.push(new Date(x));
+        if (!ds.length) ds.push(parse(r.fixedEnd)); const base=Math.floor(r.aps/ds.length); let extra=r.aps-base*ds.length;
+        ds.forEach(d=>{ addDay(d, base+(extra>0?1:0)); if (extra>0) extra--; }); }
+      continue; }
+    if (!inScope(r)) continue;
+    const key = r.site==="RS" ? r.building : r.site;
+    if (prev!==null && key!==prev && used>0 && s.newSiteDay) next();
+    if (used>=cap(day)) next();
+    const st=new Date(day); let rem=r.aps;
+    while (rem>0){ const take=Math.min(cap(day)-used, rem); used+=take; rem-=take; addDay(day, take); if (rem>0) next(); }
+    out.set(r.id,{start:iso(st), end:iso(day)}); prev=key;
+  }
+  out.daily = daily; // planned printers per working day
+  out.start = iso(nextWork(start)); // the day the remaining buildings start
+  return out;
+}
+function phaseSummary(plan){
+  const list=[...model.phases.values()].sort((a,b)=>a.no-b.no).map(p=>({...p, aps:0, buildings:0, done:0, starts:[], ends:[]}));
+  const byNo=new Map(list.map(p=>[p.no,p]));
+  for (const r of model.rows){ const p=byNo.get(r.phase); if (!p) continue; const d=plan.get(r.id);
+    if (inScope(r)){ p.aps+=r.aps; p.buildings++; if (r.status==="Complete") p.done++; }
+    if (d && (inScope(r)||d.fixed)){ p.starts.push(d.start); p.ends.push(d.end); } }
+  for (const p of list){ p.start=minIso(p.starts); p.end=maxIso(p.ends); }
+  return list.filter(p=>p.buildings>0);
+}
+
+/* ---------------- rendering ---------------- */
+function renderAll(){
+  const plan=computePlan(mins); const ph=phaseSummary(plan);
+  renderFigures(plan, ph); renderOrder(ph); renderProgress(plan); renderInstall(plan, ph); renderTimeline(plan, ph); renderTable(plan, ph); renderIssues(); renderFoot();
+}
+
+/* ---------------- planned vs actual ---------------- */
+const teamsOn = d => { const s=model.settings; return s.teams2!=null && s.from2 && iso(d)>=s.from2 ? s.teams2 : s.teams1; };
+// Cumulative series over working days from a per-day map
+function cumulative(daily, from, to){
+  const pts=[]; let c=0;
+  for (let x=new Date(from); x<=to; x=addDays(x,1)){ if (!isWork(x)) continue; c+=daily.get(iso(x))||0; pts.push({d:new Date(x), v:c}); }
+  return pts;
+}
+function renderProgress(planAtMins){
+  const s=model.settings, today=new Date(); today.setHours(0,0,0,0);
+  const total=model.rows.filter(inScope).reduce((a,r)=>a+r.aps,0);
+  const base=computePlan(s.mins); const baseDaily=base.daily;
+  const pDays=[...baseDaily.keys()].sort(), pStart=parse(pDays[0]), pEnd=parse(pDays[pDays.length-1]);
+  // actuals by day
+  const act=new Map(); for (const e of model.log) act.set(e.date,(act.get(e.date)||0)+e.aps);
+  const aDays=[...act.keys()].sort(); const installed=[...act.values()].reduce((a,b)=>a+b,0);
+  const firstLog=aDays.length?parse(aDays[0]):null, lastLog=aDays.length?parse(aDays[aDays.length-1]):null;
+  // compare at the last logged day (or today if nothing is logged yet)
+  const asOf = lastLog && lastLog<today ? lastLog : today;
+  let plannedToday=0; for (const [k,v] of baseDaily) if (k<=iso(asOf)) plannedToday+=v;
+  // Recent pace: what was installed against what the plan expected, over the last 10 working days
+  // that had installs planned or logged (gaps with nothing planned don't count either way)
+  let pace=null, paceRatio=null, paceMins=null, paceDays=0, paceFrom=null, forecast=null, fcPts=[];
+  if (installed>0){
+    const lower = pStart<firstLog ? pStart : firstLog;
+    const counted=[]; for (let x=new Date(asOf); x>=lower && counted.length<10; x=addDays(x,-1)) if (isWork(x) && (baseDaily.get(iso(x)) || act.get(iso(x)))) counted.push(new Date(x));
+    let planned=0, done=0; for (const x of counted){ planned+=baseDaily.get(iso(x))||0; done+=act.get(iso(x))||0; }
+    paceDays=counted.length; paceFrom=counted[counted.length-1];
+    pace = done/Math.max(1,counted.length);
+    paceRatio = planned>0 ? done/planned : 1;
+    paceMins = Math.min(120, Math.max(5, s.mins/Math.max(paceRatio,0.01)));
+    // Forecast: carry on from today's actual total, running the rest of the plan at the recent pace
+    if (installed<total){
+      const eff = computePlan(paceMins).daily; const effDays=[...eff.keys()].sort();
+      let x=nextWork(addDays(asOf,1)), c=installed; fcPts.push({d:new Date(asOf), v:installed});
+      const effAt=k=>{ let t=0; for (const d of effDays){ if (d<=k) t+=eff.get(d); else break; } return t; };
+      const base0=effAt(iso(asOf)); let last=base0;
+      for (let guard=0; guard<3000 && c<total; guard++){
+        const cum=effAt(iso(x)); let step=cum-last; last=cum;
+        if (step<=0 && iso(x)>effDays[effDays.length-1]) step=teamsOn(x)*s.hours*60/paceMins; // past the end of the plan: keep going at the pace
+        c=Math.min(total, c+Math.max(0,step)); fcPts.push({d:new Date(x), v:c}); if (c<total) x=nextWork(addDays(x,1));
+      }
+      forecast=x;
+    } else forecast=lastLog;
+  }
+  // how far ahead or behind, in working days: when did (or will) the plan reach the installed total?
+  let varDays=null;
+  if (installed>0){ let c=0, reach=null; for (const k of pDays){ c+=baseDaily.get(k); if (c>=installed){ reach=parse(k); break; } }
+    if (reach) varDays = wdDiff(asOf, reach); } // negative = behind plan
+  // figures
+  const figs=$("progFigs"); figs.replaceChildren();
+  const fig=(v,l,cls)=>figs.append(el("div",{class:"fig"}, el("b",{class:cls||null,text:v}), el("span",{text:l})));
+  fig(`${nf.format(installed)} of ${nf.format(total)}`, `printers replaced (${total?Math.round(installed/total*100):0}%)`);
+  fig(nf.format(Math.round(plannedToday)), `planned by ${iso(asOf)===iso(today)?"today":fShort.format(asOf)} at ${s.mins} min per printer`);
+  if (installed>0){
+    const diff=installed-plannedToday;
+    const behindTxt = diff===0 ? "on plan" : varDays ? `${Math.abs(varDays)} working day${Math.abs(varDays)===1?"":"s"} ${varDays>0?"ahead of":"behind"} plan` : `less than a day ${diff>0?"ahead of":"behind"} plan`;
+    fig(`${diff>=0?"+":"−"}${nf.format(Math.abs(Math.round(diff)))} printers`, behindTxt, diff<0?"later":diff>0?"earlier":null);
+    if (paceRatio!=null) fig(`${Math.round(paceRatio*100)}% of plan`, `recent pace, ${pace.toFixed(1)} printers a day ≈ ${Math.round(paceMins)} min per printer (plan ${s.mins})`, paceRatio<0.95?"later":paceRatio>1.05?"earlier":null);
+    if (forecast){ const d=wdDiff(pEnd, forecast); fig(fLong.format(forecast), `forecast finish at this pace (${d===0?"same as plan":`${Math.abs(d)} working days ${d>0?"later":"earlier"} than plan`})`, d>0?"later":d<0?"earlier":null); }
+  } else {
+    fig(fLong.format(pEnd), "planned finish");
+  }
+  // chart
+  const host=$("progSvg"); host.replaceChildren();
+  let xMin=pStart, xMax=pEnd;
+  const alt = mins!==s.mins ? planAtMins : null;
+  let altEnd=null; if (alt){ const k=[...alt.daily.keys()].sort(); altEnd=parse(k[k.length-1]); if (altEnd>xMax) xMax=altEnd; }
+  if (firstLog && firstLog<xMin) xMin=firstLog; if (lastLog && lastLog>xMax) xMax=lastLog; if (forecast && forecast>xMax) xMax=forecast;
+  xMin=addDays(xMin,-((xMin.getDay()+6)%7)); xMax=addDays(xMax,7-((xMax.getDay()+6)%7));
+  const W=900, H=320, L=56, R=118, T=18, B=34;
+  const xs=d=>L+(d-xMin)/(xMax-xMin)*(W-L-R), ys=v=>T+(1-v/total)*(H-T-B);
+  const NS="http://www.w3.org/2000/svg";
+  const S_=(tag,attrs,text)=>{ const e=document.createElementNS(NS,tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v); if (text!=null) e.textContent=text; return e; };
+  const svg=S_("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"Cumulative printers replaced: planned against actual"});
+  const step = total>2000?500:total>800?200:100;
+  for (let v=0; v<=total; v+=step){ const y=ys(v); svg.append(S_("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)"})); svg.append(S_("text",{x:L-8,y:y+4,"text-anchor":"end",class:"ax"},nf.format(v))); }
+  { const y=ys(total); svg.append(S_("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line-strong)","stroke-dasharray":"2 3"})); svg.append(S_("text",{x:L+4,y:y-5,class:"ax"},`${nf.format(total)} printers in total`)); }
+  for (let m=new Date(xMin.getFullYear(),xMin.getMonth()+1,1); m<xMax; m=new Date(m.getFullYear(),m.getMonth()+1,1)){ const x=xs(m); svg.append(S_("line",{x1:x,x2:x,y1:H-B,y2:H-B+4,stroke:"var(--line-strong)"})); svg.append(S_("text",{x:x+3,y:H-B+16,class:"ax"},fMonth.format(m))); }
+  svg.append(S_("line",{x1:L,x2:W-R,y1:H-B,y2:H-B,stroke:"var(--line-strong)"}));
+  if (today>=xMin && today<=xMax){ const x=xs(today); svg.append(S_("line",{x1:x,x2:x,y1:T,y2:H-B,stroke:"var(--today)","stroke-width":1.5})); svg.append(S_("text",{x:x+4,y:T+10,class:"ax",fill:"var(--today)",style:"fill:var(--today)"},"Today")); }
+  const path=(pts,attrs)=>{ if (!pts.length) return; svg.append(S_("path",{d:pts.map((p,i)=>`${i?"L":"M"}${xs(p.d).toFixed(1)},${ys(p.v).toFixed(1)}`).join(" "),fill:"none","stroke-linejoin":"round",...attrs})); };
+  const halo="paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round;";
+  const placed=[]; // end labels already drawn, so a later one can step down instead of overlapping
+  const endLabel=(pts,text,colour)=>{ if (!pts.length) return; const p=pts[pts.length-1]; const lx=xs(p.d)+6, w=text.length*6.6; let ly=ys(p.v)+4;
+    for (let k=0; k<4 && placed.some(b=>lx<b.x+b.w+4 && b.x<lx+w+4 && Math.abs(b.y-ly)<14); k++) ly+=15;
+    placed.push({x:lx,y:ly,w}); svg.append(S_("text",{x:lx,y:ly,class:"lbl",style:`${halo}fill:${colour}`},text)); };
+  const basePts=[{d:addDays(pStart,-1),v:0}, ...cumulative(baseDaily,pStart,pEnd)];
+  path(basePts,{stroke:"var(--fg2)","stroke-width":2});
+  endLabel(basePts,`Plan · ${fShort.format(pEnd)}`,"var(--fg2)");
+  let altPts=[]; if (alt){ const k=[...alt.daily.keys()].sort(); altPts=[{d:addDays(parse(k[0]),-1),v:0}, ...cumulative(alt.daily,parse(k[0]),altEnd)];
+    path(altPts,{stroke:"var(--muted)","stroke-width":1.5,"stroke-dasharray":"5 4"}); endLabel(altPts,`${mins} min · ${fShort.format(altEnd)}`,"var(--muted)"); }
+  let actPts=[];
+  if (installed>0){ let c=0; actPts=[{d:addDays(firstLog,-1),v:0}]; for (let x=new Date(firstLog); x<=lastLog; x=addDays(x,1)){ const v=act.get(iso(x))||0; if (!isWork(x) && !v) continue; c+=v; actPts.push({d:new Date(x),v:c}); }
+    if (fcPts.length>1){ path(fcPts,{stroke:"var(--accent)","stroke-width":2,"stroke-dasharray":"2 4"}); endLabel(fcPts,`Forecast · ${fShort.format(forecast)}`,"var(--accent)"); }
+    path(actPts,{stroke:"var(--accent)","stroke-width":2.5});
+    for (const p of actPts.slice(1)) if (act.get(iso(p.d))) svg.append(S_("circle",{cx:xs(p.d),cy:ys(p.v),r:3,fill:"var(--accent)",stroke:"var(--surface)","stroke-width":1.5}));
+    const lp=actPts[actPts.length-1]; svg.append(S_("text",{x:xs(lp.d)+8,y:ys(lp.v)-12,class:"lbl",style:`${halo}fill:var(--accent)`},`Actual · ${nf.format(installed)}`)); }
+  // hover crosshair
+  const cross=S_("line",{x1:0,x2:0,y1:T,y2:H-B,stroke:"var(--fg2)","stroke-width":1,opacity:0}); svg.append(cross);
+  const hit=S_("rect",{x:L,y:T,width:W-L-R,height:H-T-B,fill:"transparent"}); svg.append(hit);
+  const tip=$("progTip"), valAt=(pts,d)=>{ let v=null; for (const p of pts){ if (p.d<=d) v=p.v; else break; } return v; };
+  hit.addEventListener("pointermove",e=>{ const r=svg.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; let d=new Date(xMin.getTime()+(px-L)/(W-L-R)*(xMax-xMin)); d.setHours(0,0,0,0);
+    const cx=xs(d); cross.setAttribute("x1",cx); cross.setAttribute("x2",cx); cross.setAttribute("opacity",.4);
+    const pv=valAt(basePts,d), av=lastLog && d<=lastLog ? valAt(actPts,d) : null, fv=fcPts.length && d>lastLog ? valAt(fcPts,d) : null, alv=alt? valAt(altPts,d) : null;
+    tip.replaceChildren(el("b",{text:fLong.format(d)}), el("div",{text:`Plan: ${nf.format(Math.round(pv||0))} printers`}), alv!=null? el("div",{text:`At ${mins} min: ${nf.format(Math.round(alv))}`}) : null,
+      av!=null? el("div",{text:`Actual: ${nf.format(Math.round(av))} printers${act.get(iso(d))?` (+${act.get(iso(d))} that day)`:""}`}) : null, fv!=null? el("div",{text:`Forecast: ${nf.format(Math.round(fv))}`}) : null);
+    const cr=$("progChart").getBoundingClientRect(); tip.hidden=false; tip.style.left=Math.max(4,Math.min(e.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(e.clientY-cr.top+14)+"px"; });
+  hit.addEventListener("pointerleave",()=>{ tip.hidden=true; cross.setAttribute("opacity",0); });
+  host.append(svg);
+  // legend
+  const lg=$("progLegend"); lg.replaceChildren();
+  const key=(dash,colour,width,text)=>{ const k=S_("svg",{width:26,height:10,"aria-hidden":"true"}); k.append(S_("line",{x1:1,x2:25,y1:5,y2:5,stroke:colour,"stroke-width":width,...(dash?{"stroke-dasharray":dash}:{})})); return el("span",{class:"key"}, k, text); };
+  lg.append(key(null,"var(--fg2)",2,`Plan at ${s.mins} min per printer (spreadsheet)`));
+  if (alt) lg.append(key("5 4","var(--muted)",1.5,`What if ${mins} min per printer`));
+  if (installed>0){ lg.append(key(null,"var(--accent)",2.5,"Actual (Install Log)")); if (fcPts.length>1) lg.append(key("2 4","var(--accent)",2,"Forecast at the recent pace")); }
+  $("progNote").textContent = installed>0
+    ? `Recent pace compares what was installed with what the plan expected over the last ${paceDays} working day${paceDays===1?"":"s"} with replacements planned or logged (${fShort.format(paceFrom)} to ${fShort.format(asOf)}). The forecast starts from the actual total and runs the rest of the plan at that pace${s.teams2!=null&&s.from2?`, including the second team from ${fLong.format(parse(s.from2))}`:""}. Comparisons are as of ${fLong.format(asOf)}, the last day logged.`
+    : "No replacements logged yet. Add a row to the Install Log tab in the spreadsheet for each area on each day (date, area, printers replaced) and the actual line and forecast will appear here.";
+}
+function renderOrder(ph){
+  const strip=$("strip"), cards=$("phases"); strip.replaceChildren(); cards.replaceChildren();
+  const total=ph.reduce((s,p)=>s+p.aps,0)||1;
+  for (const p of ph){
+    const dates = p.start&&p.end ? range(parse(p.start),parse(p.end)) : "Not set";
+    strip.append(el("div",{class:"seg",style:`--c:${siteVar(p.site)};flex:${p.aps} 1 0`,title:`${p.no}. ${p.label}: ${nf.format(p.aps)} printers (${Math.round(p.aps/total*100)}% of the programme), ${dates}`}));
+    cards.append(el("article",{class:"phase"},
+      el("div",{class:"ph-top"}, el("span",{class:"no",text:String(p.no)}), el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:p.site})),
+      el("div",{class:"name",text:p.label}),
+      el("dl",{}, el("dt",{text:"Printers"}), el("dd",{text:nf.format(p.aps)}), el("dt",{text:"Areas"}), el("dd",{text:String(p.buildings)}),
+        el("dt",{text:"Dates"}), el("dd",{text:dates}), el("dt",{text:"Complete"}), el("dd",{text:`${p.done} of ${p.buildings}`}))));
+  }
+}
+function renderFigures(plan, ph){
+  const box=$("figures"); box.replaceChildren();
+  const aps=ph.reduce((s,p)=>s+p.aps,0), b=ph.reduce((s,p)=>s+p.buildings,0), done=ph.reduce((s,p)=>s+p.done,0);
+  const sites=new Set(model.rows.filter(inScope).map(r=>r.site)).size;
+  const fin=maxIso(ph.map(p=>p.end).filter(Boolean)), st=minIso(ph.map(p=>p.start).filter(Boolean));
+  for (const [v,l] of [[nf.format(aps),"printers in scope"],[String(sites),"sites"],[String(b),"areas"],[`${done} of ${b}`,"areas complete"],[st?fLong.format(parse(st)):"–","first replacements"],[fin?fLong.format(parse(fin)):"–","planned finish"]])
+    box.append(el("div",{class:"fig"}, el("b",{text:v}), el("span",{text:l})));
+  const src=model.source;
+  $("source").textContent = `From ${src.name}${src.modified ? ", updated "+fStamp.format(src.modified) : ""}.`;
+  const bn=$("banner");
+  if (mins!==model.settings.mins){ bn.hidden=false; bn.textContent=`Showing dates at ${mins} minutes per printer. The spreadsheet is set to ${model.settings.mins} minutes.`; } else bn.hidden=true;
+}
+function renderInstall(plan, ph){
+  const s=model.settings, perDay=t=>Math.max(1,Math.floor(t*s.hours*60/mins));
+  const fin=maxIso(ph.map(p=>p.end).filter(Boolean));
+  const baseFin=maxIso(ph.map(p=>p.baseline).filter(Boolean));
+  $("finish").textContent = fin ? fLong.format(parse(fin)) : "–";
+  const dl=$("delta"); const bname = model.baselineName || "the baseline plan";
+  if (fin && baseFin){ const d=wdDiff(parse(baseFin), parse(fin)); dl.dataset.dir=d>0?"later":d<0?"earlier":"same";
+    dl.textContent = d===0 ? `Same as the ${bname}` : `${Math.abs(d)} working day${Math.abs(d)===1?"":"s"} ${d>0?"later":"earlier"} than the ${bname} (${fLong.format(parse(baseFin))})`; }
+  else dl.textContent="";
+  const two = s.teams2!=null && s.from2;
+  const done=model.rows.filter(r=>isFixed(r) && r.status==="Complete").length, booked=model.rows.filter(r=>isFixed(r) && r.status!=="Complete" && inScope(r)).map(r=>r.building);
+  const rs=computePlan(mins).start;
+  $("basis").textContent = `${perDay(s.teams1)} printers a day${two?`, then ${perDay(s.teams2)} a day from ${fLong.format(parse(s.from2))}`:""}. From the spreadsheet: remaining areas start ${fLong.format(parse(rs))}${done?`, after the ${done} area${done===1?"":"s"} marked Complete`:""}, ${s.hours} hours working a day Monday to Friday, ${s.teams1} team${s.teams1===1?"":"s"} of 2${two?`, then ${s.teams2} from ${fLong.format(parse(s.from2))}`:""}.${booked.length? ` Booked alongside the plan on fixed dates: ${booked.length<=3?booked.join(", "):booked.length+" buildings"}.`:""}`;
+  // phase table
+  const t=$("phaseTable"); t.replaceChildren();
+  const hasBase = ph.some(p=>p.baseline);
+  t.append(el("thead",{}, el("tr",{}, el("th",{text:"Phase"}), el("th",{text:"Dates"}), hasBase?el("th",{text:model.baselineName? model.baselineName.replace(/\s*\(.*\)$/,"")+" end":"Baseline end"}):null, hasBase?el("th",{class:"n",title:"Change in working days",text:"Change"}):null)));
+  const tb=el("tbody");
+  for (const p of ph){
+    const d = p.end && p.baseline ? wdDiff(parse(p.baseline), parse(p.end)) : null;
+    tb.append(el("tr",{}, el("td",{class:"ph"}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:String(p.no)}), " "+p.label),
+      el("td",{class:"num",text: p.start&&p.end ? `${fShort.format(parse(p.start))} – ${fShort.format(parse(p.end))}` : "–"}),
+      hasBase? el("td",{class:"num",text:p.baseline?fShort.format(parse(p.baseline)):"–"}) : null,
+      hasBase? el("td",{class:"n"+(d>0?" later":d<0?" earlier":""),text:d===null?"–":signed(d)}) : null));
+  }
+  t.append(tb);
+  renderChart(baseFin);
+}
+let curve=null;
+function renderChart(baseFin){
+  const host=$("chartSvg");
+  if (!curve){ curve=MIN_STEPS.map(m=>{ const f=maxIso([...computePlan(m).values()].map(d=>d.end)); return {m, f, t:parse(f).getTime()}; }); }
+  host.replaceChildren();
+  const lo=MIN_STEPS[0], hi=MIN_STEPS[MIN_STEPS.length-1];
+  const W=560, H=230, L=78, R=16, T=16, B=34;
+  const tMin=Math.min(...curve.map(p=>p.t)), tMax=Math.max(...curve.map(p=>p.t), baseFin?parse(baseFin).getTime():0);
+  const y0=new Date(tMin); y0.setDate(1); const y1=new Date(tMax); y1.setMonth(y1.getMonth()+1,1);
+  const xs=m=>L+(m-lo)/(hi-lo)*(W-L-R), ys=t=>T+(1-(t-y0)/(y1-y0))*(H-T-B);
+  const NS="http://www.w3.org/2000/svg";
+  const s=(tag,attrs,text)=>{ const e=document.createElementNS(NS,tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v); if (text!=null) e.textContent=text; return e; };
+  const svg=s("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":`Finish date for ${lo} to ${hi} minutes per printer`});
+  const months=[]; for (let m=new Date(y0); m<=y1; m=new Date(m.getFullYear(),m.getMonth()+1,1)) months.push(m);
+  const step=months.length>9?2:1;
+  months.forEach((m,i)=>{ if (i%step) return; const y=ys(m.getTime());
+    svg.append(s("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)"})); svg.append(s("text",{x:L-8,y:y+4,"text-anchor":"end",class:"ax"},fMonth.format(m))); });
+  for (const m of MIN_STEPS){ const x=xs(m); svg.append(s("line",{x1:x,x2:x,y1:H-B,y2:H-B+4,stroke:"var(--line-strong)"})); svg.append(s("text",{x,y:H-B+17,"text-anchor":"middle",class:"ax"},String(m))); }
+  svg.append(s("text",{x:(L+W-R)/2,y:H-2,"text-anchor":"middle",class:"ax"},"minutes per printer"));
+  svg.append(s("line",{x1:L,x2:W-R,y1:H-B,y2:H-B,stroke:"var(--line-strong)"}));
+  if (baseFin){ const y=ys(parse(baseFin).getTime()); svg.append(s("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--fg2)","stroke-dasharray":"4 4"}));
+    svg.append(s("text",{x:W-R,y:y-5,"text-anchor":"end",class:"ax"},(model.baselineName||"baseline").replace(/\s*\(.*\)$/,""))); }
+  svg.append(s("path",{d:curve.map((p,i)=>`${i?"L":"M"}${xs(p.m).toFixed(1)},${ys(p.t).toFixed(1)}`).join(" "),fill:"none",stroke:"var(--accent)","stroke-width":2,"stroke-linejoin":"round"}));
+  for (const p of curve) svg.append(s("circle",{cx:xs(p.m),cy:ys(p.t),r:2.5,fill:"var(--accent)"}));
+  const sel=curve.find(p=>p.m===mins);
+  if (sel){ const x=xs(sel.m), y=ys(sel.t), right=x<(L+W-R)/2;
+    svg.append(s("line",{x1:x,x2:x,y1:T,y2:H-B,stroke:"var(--accent)",opacity:.35}));
+    svg.append(s("circle",{cx:x,cy:y,r:5.5,fill:"var(--accent)",stroke:"var(--surface)","stroke-width":2}));
+    svg.append(s("text",{x:right?x+9:x-9,y:y-9,"text-anchor":right?"start":"end",class:"lbl"},`${sel.m} min · ${fShort.format(parse(sel.f))}`)); }
+  const hit=s("rect",{x:L,y:T,width:W-L-R,height:H-T-B,fill:"transparent",style:"cursor:pointer"});
+  const tip=$("chartTip");
+  const near=e=>{ const r=svg.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; const m=Math.round((lo+(px-L)/(W-L-R)*(hi-lo))/5)*5; return curve.find(p=>p.m===Math.min(hi,Math.max(lo,m))); };
+  hit.addEventListener("pointermove",e=>{ const p=near(e); if(!p) return; const cr=$("chart").getBoundingClientRect();
+    const d = baseFin ? wdDiff(parse(baseFin), parse(p.f)) : null;
+    tip.replaceChildren(el("b",{text:`${p.m} minutes per printer`}), el("div",{text:`Finish ${fLong.format(parse(p.f))}`}), d===null?null:el("div",{text:d===0?`Same as the ${model.baselineName||"baseline"}`:`${signed(d)} working days`}), el("div",{class:"muted",text:"Click to show these dates"}));
+    tip.hidden=false; tip.style.left=Math.max(4,Math.min(e.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(e.clientY-cr.top+14)+"px"; });
+  hit.addEventListener("pointerleave",()=>tip.hidden=true);
+  hit.addEventListener("click",e=>{ const p=near(e); if(!p) return; tip.hidden=true; setMins(p.m); });
+  svg.append(hit); host.append(svg);
+}
+function renderTimeline(plan, ph){
+  const host=$("timeline"); host.replaceChildren();
+  const all=[...plan.values()]; if (!all.length){ host.append(el("p",{class:"muted",text:"No dates to show."})); return; }
+  let min=parse(minIso(all.map(d=>d.start))), max=parse(maxIso(all.map(d=>d.end)));
+  min=addDays(min, -((min.getDay()+6)%7)); max=addDays(max, 7-((max.getDay()+6)%7));
+  const span=(max-min)||1, x=d=>((d-min)/span*100), days=span/864e5;
+  const tl=el("div",{class:"tl"}); const axis=el("div",{class:"tl-axis"}, el("div"), el("div",{class:"tl-track"})); const grid=el("div",{class:"tl-grid"});
+  if (days<=200) for (let w=new Date(min); w<max; w=addDays(w,7)) grid.append(el("div",{class:"gl",style:`left:${x(w)}%`}));
+  axis.lastChild.append(el("span",{class:"tick",style:"left:0%",text: days<=120?fShort.format(min):fMonth.format(min)}));
+  for (let m=new Date(min.getFullYear(),min.getMonth()+1,1); m<max; m=new Date(m.getFullYear(),m.getMonth()+1,1)){ grid.append(el("div",{class:"gl month",style:`left:${x(m)}%`})); if (x(m)>6) axis.lastChild.append(el("span",{class:"tick",style:`left:${x(m)}%`,text:fMonth.format(m)})); }
+  // shade runs of non-working weekdays (3 or more), such as the Christmas holiday
+  const off=[...model.nwd.keys()].sort(); let run=[];
+  const flush=()=>{ if (run.length>=3){ const s=parse(run[0]), e=addDays(parse(run[run.length-1]),1); if (e>min && s<max){ const l=x(s<min?min:s), r=x(e>max?max:e);
+      grid.append(el("div",{class:"brk",style:`left:${l}%;width:${r-l}%`,title:model.nwd.get(run[0])||"Non-working days"}, el("span",{text:(model.nwd.get(run[0])||"No work").replace(/\s*\(.*\)$/,"")}))); } } run=[]; };
+  for (const d of off){
+    if (run.length){ let g=addDays(parse(run[run.length-1]),1); while (iso(g)<d && (g.getDay()===0||g.getDay()===6)) g=addDays(g,1); if (iso(g)!==d) flush(); }
+    run.push(d);
+  }
+  flush();
+  const today=new Date(); today.setHours(0,0,0,0);
+  if (today>=min && today<max) grid.append(el("div",{class:"today",style:`left:${x(today)}%`}, el("span",{text:"Today"})));
+  tl.append(axis); const body=el("div",{style:"position:relative"}); body.append(grid);
+  // Always chronological: phases by start date, and buildings within each phase by start then end date (order of works breaks ties)
+  const LAST="9999-12-31";
+  const phs=[...ph].sort((a,b)=>(a.start||LAST).localeCompare(b.start||LAST) || (a.end||LAST).localeCompare(b.end||LAST) || a.no-b.no);
+  for (const p of phs){
+    const head=el("div",{class:"tl-row ph"}, el("div",{class:"lbl2"}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:String(p.no)}), el("span",{text:p.label})), el("div",{class:"tl-track"}));
+    if (p.start&&p.end){ const s=parse(p.start), e=parse(p.end); const b=el("div",{class:"bar span",style:`--c:${siteVar(p.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`});
+      b.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(s,e), `${workDays(s,e)} working days · ${nf.format(p.aps)} printers`]}); head.lastChild.append(b); }
+    body.append(head);
+    const prs=model.rows.filter(r=>r.phase===p.no && (inScope(r)||isFixed(r))).map(r=>({r,d:plan.get(r.id)}))
+      .sort((a,b)=>((a.d&&a.d.start)||LAST).localeCompare((b.d&&b.d.start)||LAST) || ((a.d&&a.d.end)||LAST).localeCompare((b.d&&b.d.end)||LAST) || a.r.order-b.r.order);
+    for (const {r,d} of prs){ const row=el("div",{class:"tl-row"}, el("div",{class:"lbl2",title:r.building,text:shortName(r)}), el("div",{class:"tl-track"}));
+      if (d){ const s=parse(d.start), e=parse(d.end);
+        const b=el("div",{class:"bar"+(d.fixed?" fixed":""),tabindex:"0",style:`--c:${siteVar(r.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`,"aria-label":`${r.building}, ${range(s,e)}`});
+        b.dataset.tip=JSON.stringify({t:r.building, l:[`${r.site} · ${r.siteName}`, range(s,e), `${workDays(s,e)} working days · ${r.aps} printers`, d.fixed?"Fixed dates":null, `Status: ${r.status}`]});
+        row.lastChild.append(b); }
+      body.append(row);
+    }
+  }
+  tl.append(body); host.append(tl);
+  const lg=$("legend"); lg.replaceChildren(); for (const s of [...new Set(ph.map(p=>p.site))]) lg.append(el("span",{class:"chip",style:`--c:${siteVar(s)}`,text:s}));
+}
+function renderTable(plan, ph){
+  const t=$("sched"); t.replaceChildren();
+  t.append(el("thead",{}, el("tr",{}, ...["Order","Area","Floor","Printers","Replaced","Models","Start","End","Work days","Status","Notes"].map((h,i)=>el("th",{scope:"col",class:[3,4,8].includes(i)?"n":null,text:h})))));
+  const done=new Map(); for (const e of model.log) done.set(e.building.toLowerCase(),(done.get(e.building.toLowerCase())||0)+e.aps);
+  for (const p of ph){
+    const tb=el("tbody");
+    tb.append(el("tr",{class:"grp"}, el("th",{colspan:"11",scope:"colgroup"}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:`${p.no} · ${p.site}`}), " "+p.label,
+      el("span",{class:"meta",text:`${nf.format(p.aps)} printers · ${p.buildings} area${p.buildings===1?"":"s"} · ${range(parse(p.start),parse(p.end))}`}))));
+    for (const r of model.rows.filter(r=>r.phase===p.no)){
+      const d=plan.get(r.id); const s=d&&parse(d.start), e=d&&parse(d.end);
+      const tr=el("tr",{class:r.status==="Out of scope"||!(r.aps>0)?"oos":null,"data-start":d?d.start:"", "data-end":d?d.end:"", "data-building":r.building},
+        el("td",{class:"n",text:String(r.order)}),
+        el("td",{}, el("span",{class:"bname",title:r.building,text:shortName(r)}), d&&d.fixed? el("span",{class:"tag",title:"Dates typed into Fixed start and Fixed end",text:"FIXED"}) : null,
+          r.dup? el("div",{class:"hint",text:`${r.dup} duplicate rows in the tracker not counted`}) : null),
+        el("td",{class:"floors",text:r.floors}),
+        el("td",{class:"n",text: r.aps>0 && r.status!=="Out of scope" ? nf.format(r.aps) : `0 (${r.oos} out of scope)`}),
+        el("td",{class:"n",text: done.get(r.building.toLowerCase()) ? nf.format(done.get(r.building.toLowerCase())) : "–"}),
+        el("td",{class:"models",text:r.models||"–"}),
+        el("td",{class:"d",text:s?fLong.format(s):"–"}), el("td",{class:"d",text:e?fLong.format(e):"–"}),
+        el("td",{class:"n",text:s&&e?String(workDays(s,e)):"–"}),
+        el("td",{}, el("span",{class:"st","data-s":r.status}, el("i",{"aria-hidden":"true",text:STATUS_ICON[r.status]||""}), r.status)),
+        el("td",{text:r.notes}));
+      tb.append(tr);
+    }
+    t.append(tb);
+  }
+  const listed=model.rows.reduce((a,r)=>a+r.listed,0), oos=model.rows.reduce((a,r)=>a+r.oos,0), dup=model.rows.reduce((a,r)=>a+r.dup,0);
+  $("bNote").textContent = `${nf.format(listed)} printers in the supplier's list${oos?`; ${nf.format(oos)} out of scope aren't counted`:""}. Each area is a floor of a building, or the whole building where it has fewer than 20 printers.`;
+}
+function renderIssues(){
+  const panel=$("issuesPanel"), list=$("issList"); list.replaceChildren();
+  if (!model.issues.length){ panel.hidden=true; return; }
+  panel.hidden=false; $("issSummary").textContent=`Issues in the printer list (${model.issues.length})`;
+  for (const i of model.issues) list.append(el("div",{class:"iss-item"}, el("b",{text:i.issue||""}),
+    i.where? el("span",{class:"muted",text:i.where}) : null, i.detail? el("span",{text:i.detail}) : null,
+    i["suggested fix"]? el("span",{}, el("strong",{text:"Fix: "}), i["suggested fix"]) : null,
+    (i.owner||i.status)? el("span",{class:"hint",text:[i.owner&&`Owner: ${i.owner}`, i.status&&`Status: ${i.status}`].filter(Boolean).join(" · ")}) : null));
+}
+function renderFoot(){
+  const f=$("foot"); f.replaceChildren();
+  f.append(el("p",{text:`To change the plan, edit ${XLSX_FILE} (settings on the Order of Works tab; fixed dates, status and notes on the Areas tab) and upload it again in place of the old copy. This page reads it each time it opens.`}));
+  f.append(el("p",{text:"Work days are Monday to Friday, leaving out the bank holidays and other days listed on the spreadsheet's Non-Working Days tab."}));
+  f.append(el("p",{text:`Page version ${PAGE_VERSION}.`}));
+  const b=el("button",{class:"linkbtn",type:"button",text:"Open a different copy of the spreadsheet"}); b.addEventListener("click",()=>$("pick").click());
+  f.append(el("p",{}, b));
+}
+
+/* tooltips for timeline bars */
+(function(){
+  const tip=$("tip"), sc=$("tlScroll");
+  const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.filter(Boolean).map(s=>el("div",{text:s}))); tip.hidden=false;
+    const r=sc.getBoundingClientRect(); tip.style.left=Math.max(4,Math.min(cx-r.left+sc.scrollLeft+12, sc.scrollLeft+sc.clientWidth-tip.offsetWidth-8))+"px"; tip.style.top=(cy-r.top+14)+"px"; };
+  sc.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
+  sc.addEventListener("pointerleave",()=>tip.hidden=true);
+  sc.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+r.width/2,r.bottom); } });
+  sc.addEventListener("focusout",()=>tip.hidden=true);
+})();
+
+/* logo: use the first file that loads; otherwise show the Trust name as text */
+(function(){
+  const img=$("logo"), txt=$("logoText"); let i=0;
+  img.addEventListener("load",()=>{ img.hidden=false; txt.hidden=true; });
+  img.addEventListener("error",()=>{ if (i<LOGO_FILES.length) img.src=LOGO_FILES[i++]; else { img.hidden=true; txt.hidden=false; } });
+  if (LOGO_FILES.length) img.src=LOGO_FILES[i++]; else txt.hidden=false;
+})();
+
+/* ---------------- controls and loading ---------------- */
+function setMins(m){ mins=m; $("minsSel").value=String(m); renderAll(); }
+function fillSelect(){
+  const sel=$("minsSel"); sel.replaceChildren();
+  const opts=[...MIN_STEPS]; if (!opts.includes(model.settings.mins)) opts.push(model.settings.mins);
+  opts.sort((a,b)=>a-b).forEach(m=>sel.append(el("option",{value:String(m),text:`${m} min${m===model.settings.mins?" (spreadsheet)":""}`})));
+  sel.value=String(mins);
+}
+$("minsSel").addEventListener("change",()=>setMins(Number($("minsSel").value)));
+
+function load(buf, source){
+  try {
+    if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
+    const wb=XLSX.read(buf,{type:"array"});
+    model=readWorkbook(wb, source); curve=null; mins=model.settings.mins;
+    fillSelect(); renderAll();
+    $("loader").hidden=true; $("main").hidden=false;
+  } catch(err){ showLoader("Couldn't read the spreadsheet", err.message || String(err)); }
+}
+function showLoader(title, text){ $("loader").hidden=false; $("main").hidden=true; $("loaderTitle").textContent=title; $("loaderText").textContent=text; $("loaderPick").hidden=false; }
+function readFile(file){ if (!file) return; const fr=new FileReader(); fr.onload=()=>load(fr.result,{name:file.name, modified:file.lastModified?new Date(file.lastModified):null}); fr.readAsArrayBuffer(file); }
+$("pickBtn").addEventListener("click",()=>$("pick").click());
+$("pick").addEventListener("change",e=>{ readFile(e.target.files[0]); e.target.value=""; });
+const drop=$("loader");
+drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
+drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("over"); readFile(e.dataTransfer.files[0]); });
+
+(async () => {
+  try {
+    const res = await fetch(XLSX_FILE, {cache:"no-store"});
+    if (!res.ok) throw new Error(`${res.status}`);
+    const lm = res.headers.get("Last-Modified");
+    load(await res.arrayBuffer(), {name:XLSX_FILE, modified: lm ? new Date(lm) : null});
+  } catch(err) {
+    showLoader("Choose the planner spreadsheet", `${XLSX_FILE} couldn't be loaded from the same folder as this page. This happens when the page is opened straight from your computer rather than from GitHub. Choose the file to view it here.`);
+  }
+})();
+})();
+</script>
+</body>
+</html>
