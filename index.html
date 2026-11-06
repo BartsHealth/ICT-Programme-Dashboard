@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Health ICT programme overview for the ICT Director, version 1.5 (5 Nov 2026).
+<!-- Barts Health ICT programme overview for the ICT Director, version 1.6 (6 Nov 2026).
      To add a programme, add an entry to PROGRAMMES in the script below.
      Put the Trust logo in this folder as barts-health-logo.png (or .svg / .jpg). -->
 <html lang="en-GB">
@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
-<meta name="version" content="1.5">
+<meta name="version" content="1.6">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -58,7 +58,22 @@ h1,h2,h3{margin:0;font-weight:700;text-wrap:balance}
 h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 
 /* at a glance */
-.headline{background:var(--surface);border-left:6px solid var(--nhs-blue);padding:16px 20px;margin:0 0 16px;font-size:17px;max-width:none}
+.headline{background:var(--surface);border-left:6px solid var(--nhs-blue);padding:16px 20px;margin:0;font-size:17px;max-width:none}
+/* summary and rating side by side */
+.glance-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:stretch;margin:0 0 16px}
+.rating{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 18px;display:flex;align-items:center;gap:16px}
+.rating-photo{width:84px;height:84px;border-radius:50%;object-fit:cover;flex:none;border:3px solid var(--nhs-blue);background:var(--track)}
+.rating-body{display:grid;gap:4px;min-width:0}
+.rating-title{margin:0;font-size:14px;font-weight:700;color:var(--muted)}
+.rating-who{margin:0;font-size:15px;font-weight:700}
+.thumbs{display:flex;gap:6px;margin-top:2px}
+.thumb{display:grid;justify-items:center;gap:1px;font-size:12.5px;color:var(--muted);line-height:1.2}
+.thumb svg{width:28px;height:28px;display:block}
+.thumb.on svg path{fill:var(--nhs-blue)}
+.thumb.off svg path{fill:none;stroke:var(--line-strong);stroke-width:1.5}
+.thumb.sel{color:var(--fg);font-weight:700}
+.rating-score{margin:0;font-size:15px;font-weight:700}
+@media (max-width:760px){ .glance-top{grid-template-columns:1fr} .rating{justify-self:stretch} }
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px 18px;display:grid;gap:6px;align-content:start;min-width:0}
 .tile .k{font-size:14px;font-weight:700;color:var(--muted)}
@@ -180,14 +195,25 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.5 · 5 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.6 · 6 Nov 2026</span></p>
   </div>
 </div>
 
 <main class="wrap">
   <section aria-labelledby="h-glance">
     <h2 id="h-glance">At a glance</h2>
-    <p class="headline" id="headline"><span class="loading">Reading the programme spreadsheets…</span></p>
+    <div class="glance-top">
+      <p class="headline" id="headline"><span class="loading">Reading the programme spreadsheets…</span></p>
+      <div class="rating" id="rating" hidden>
+        <img class="rating-photo" id="ratingPhoto" alt="" hidden>
+        <div class="rating-body">
+          <p class="rating-title" id="ratingTitle"></p>
+          <p class="rating-who" id="ratingWho" hidden></p>
+          <div class="thumbs" id="ratingThumbs" role="img"></div>
+          <p class="rating-score" id="ratingScore"></p>
+        </div>
+      </div>
+    </div>
     <div class="tiles" id="tiles"></div>
   </section>
 
@@ -208,7 +234,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script>
 (() => {
 "use strict";
-const PAGE_VERSION = "1.5 · 5 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.6 · 6 Nov 2026"; // keep in step with the version text in the header
+
+// The rating next to the summary: a photo, a score on a 1 to 5 thumbs-up scale, and an optional name and role.
+// Change score to move the setting; set photo to null to hide the photo, or show:false to hide the whole panel.
+const RATING = { show: true, photo: "status-photo.jpg", title: "Overall rating", name: "", role: "", score: 5, outOf: 5 };
 
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
@@ -599,6 +629,25 @@ function renderProgramme({p, st, error}, i){
   return card;
 }
 
+function renderRating(){
+  const R=RATING, box=$("rating"); if (!R || !R.show) return;
+  const n=Math.max(1, R.outOf||5), sc=Math.max(0, Math.min(n, Math.round(R.score||0)));
+  $("ratingTitle").textContent = R.title || "Rating";
+  const who=[R.name, R.role].filter(Boolean).join(", "); if (who){ $("ratingWho").textContent=who; $("ratingWho").hidden=false; }
+  const img=$("ratingPhoto");
+  if (R.photo){ img.alt = R.name ? `Photo of ${R.name}` : "Photo"; img.addEventListener("load",()=>{ img.hidden=false; }); img.addEventListener("error",()=>{ img.hidden=true; }); img.src=R.photo; }
+  const host=$("ratingThumbs"); host.replaceChildren(); host.setAttribute("aria-label", `${sc} out of ${n} thumbs up`);
+  const NS="http://www.w3.org/2000/svg";
+  for (let i=1;i<=n;i++){
+    const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox","0 0 24 24"); svg.setAttribute("aria-hidden","true");
+    const path=document.createElementNS(NS,"path");
+    path.setAttribute("d","M7 10v11H3.6A1.6 1.6 0 0 1 2 19.4v-7.8A1.6 1.6 0 0 1 3.6 10H7Zm2 11V9.6l3.7-6.4c.4-.6 1.1-.9 1.8-.6 1 .4 1.5 1.4 1.3 2.4L15 9h4.6c1.4 0 2.4 1.3 2.1 2.6l-1.7 7.5A2.4 2.4 0 0 1 17.6 21H9Z");
+    svg.append(path);
+    host.append(el("span",{class:"thumb "+(i<=sc?"on":"off")+(i===sc?" sel":"")}, svg, String(i)));
+  }
+  $("ratingScore").textContent = `${sc} out of ${n}`;
+  box.hidden=false;
+}
 function renderRules(){
   const R=RAG_RULES, ul=$("rules"); ul.replaceChildren();
   const li=(r,t)=>ul.append(el("li",{}, ragBadge(r), el("span",{text:t})));
@@ -622,7 +671,7 @@ function renderFoot(){
 })();
 
 $("asAt").textContent = `Status at ${fDay.format(TODAY)}`;
-renderRules(); renderFoot();
+renderRules(); renderFoot(); renderRating();
 Promise.all(PROGRAMMES.map(loadStatus)).then(results=>{
   renderTiles(results);
   const host=$("progs"); host.replaceChildren();
