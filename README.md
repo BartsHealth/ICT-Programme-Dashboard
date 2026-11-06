@@ -55,7 +55,7 @@ To change the thresholds, edit `RAG_RULES` near the top of the script in `index.
 
 Edit the planner spreadsheet in Excel (settings on the **Order of Works** tab; fixed dates, status and notes on the **Buildings** tab for Wi-Fi or the **Areas** tab for printers; actual work on the **Install Log** tab), save it with the same name, and upload it in place of the old copy.
 
-Fixed dates: a building or area marked **Complete** keeps its dates, and the rest of the plan starts the working day after the last completed one. One with fixed dates that isn't complete yet (such as Central Tower floors 14 and 15 on 6 Nov) is a booking: it keeps its dates and the plan carries on alongside it.
+Fixed dates: a building or area marked **Complete** keeps its dates, and the rest of the plan starts the working day after the last completed one. One with fixed dates that isn't complete yet (such as Alexander Wing, booked for 9 to 13 Nov) is a booking: it keeps its dates and the plan carries on alongside it.
 
 Keep the Install Log up to date: the front screen shows "Figures as of" the last day logged, and turns amber if nothing is logged for more than 5 working days of planned work.
 
