@@ -1,12 +1,16 @@
 <!doctype html>
-<!-- Barts Health ICT programme overview for the ICT Director, version 1.4 (5 Nov 2026).
+<!-- Barts Health ICT programme overview for the ICT Director, version 1.5 (5 Nov 2026).
      To add a programme, add an entry to PROGRAMMES in the script below.
      Put the Trust logo in this folder as barts-health-logo.png (or .svg / .jpg). -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.4">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
+<meta name="version" content="1.5">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -23,7 +27,7 @@
   --rag-g:#007F3B; --rag-a:#FFB81C; --rag-r:#D5281B; --rag-n:#768692;
   --s-rlh:#005EB8; --s-meh:#ED8B00; --s-sbh:#00A499; --s-rs:#AE2573; --s-nuh:#41B6E6; --s-wch:#78BE20;
   --today:#D5281B;
-  --f:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -48,6 +52,7 @@ h1,h2,h3{margin:0;font-weight:700;text-wrap:balance}
 .hero .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:14px;margin:4px 0 0}
 .ver{border:1px solid var(--white);border-radius:4px;padding:2px 7px;font-size:13px;white-space:nowrap}
 @media (max-width:560px){ .logo{height:42px} .service{font-size:17px} .hdr{min-height:68px} }
+
 
 .wrap{max-width:1160px;margin:0 auto;padding:28px 16px 56px;display:grid;gap:36px}
 h2{font-size:24px;line-height:1.25;margin-bottom:14px}
@@ -133,6 +138,24 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 .foot p{margin:0;max-width:95ch}
 
 @media (prefers-reduced-motion: no-preference){ .track .done{transition:width .4s ease} }
+/* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.hdr,.hero-inner,.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+@media (max-width:640px){
+  .wrap{padding-top:22px;gap:28px}
+  .hero-inner{padding-top:22px;padding-bottom:24px}
+  .headline{font-size:16px;padding:14px 16px}
+  .prog{padding:16px 14px;gap:16px}
+  .prog-title h3{font-size:20px}
+  .reason{font-size:16px}
+  .metrics{grid-template-columns:1fr 1fr;gap:12px 14px}
+  .metrics dd{font-size:17px}
+  .tile .v{font-size:24px}
+  .rules{padding:16px 14px}
+  .rules li{flex-direction:column;gap:6px}
+  .prog-foot .btn{width:100%;justify-content:center}
+}
+@media (max-width:359px){ .metrics{grid-template-columns:1fr} }
 @media print{
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff;font-size:12pt}
@@ -157,7 +180,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.4 · 5 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.5 · 5 Nov 2026</span></p>
   </div>
 </div>
 
@@ -185,7 +208,7 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 <script>
 (() => {
 "use strict";
-const PAGE_VERSION = "1.4 · 5 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.5 · 5 Nov 2026"; // keep in step with the version text in the header
 
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
@@ -512,7 +535,8 @@ function renderStrip(st, card){
   const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.map(s=>el("div",{text:s}))); tip.hidden=false;
     const r=area.getBoundingClientRect(); tip.style.left=Math.max(0,Math.min(cx-r.left+12, r.width-tip.offsetWidth))+"px"; tip.style.top=(cy-r.top+16)+"px"; };
   area.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
-  area.addEventListener("pointerleave",()=>tip.hidden=true);
+  area.addEventListener("pointerleave",e=>{ if (e.pointerType!=="touch") tip.hidden=true; });
+  area.addEventListener("click",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; }); // tap on a phone
   area.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+Math.min(r.width/2,40),r.bottom-6); } });
   area.addEventListener("focusout",()=>tip.hidden=true);
   box.append(area);
@@ -614,6 +638,7 @@ function declutter(){
       if (r.left<right+8) s.style.visibility="hidden"; else right=r.right; }
   }
 }
+document.addEventListener("pointerdown",e=>{ if (e.pointerType==="touch" && !e.target.closest(".sch-area")) document.querySelectorAll(".tip").forEach(t=>t.hidden=true); });
 let rz; addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(declutter,120); });
 })();
 </script>

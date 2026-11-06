@@ -1,11 +1,15 @@
 <!doctype html>
-<!-- Barts Printer Replacement Planner page, version 1.1 (5 Nov 2026). Built from the Wi-Fi planner page (1.9) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Printer Replacement Planner page, version 1.2 (5 Nov 2026). Built from the Wi-Fi planner page (2.0) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="version" content="1.1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
+<meta name="version" content="1.2">
 <title>Printer Replacement Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health printer replacement, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -20,9 +24,9 @@
   --line:#D8DDE0; --line-strong:#AEB7BD; --accent:#005EB8; --accent-fg:#FFFFFF;
   --s-rlh:#005EB8; --s-meh:#ED8B00; --s-sbh:#00A499; --s-rs:#AE2573; --s-nuh:#41B6E6; --s-wch:#78BE20;
   --good:#007F3B; --good-text:#007F3B; --warn:#FFB81C; --warn-text:#7A4E00; --crit-text:#D5281B; --today:#D5281B;
-  --f-display:Arial,"Helvetica Neue",Helvetica,sans-serif;
-  --f-body:Arial,"Helvetica Neue",Helvetica,sans-serif;
-  --f-mono:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-display:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-body:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-mono:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -111,8 +115,8 @@ table.mini{border-collapse:collapse;width:100%;font-size:13px}
 .chart{position:relative;min-width:0}
 .chart h3{font-size:14px;margin:0 0 6px}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
-.ax{font:500 11px var(--f-mono);fill:var(--muted)}
-.lbl{font:600 11.5px var(--f-body);fill:var(--fg)}
+.ax{font:500 12px var(--f-mono);fill:var(--muted)}
+.lbl{font:600 12.5px var(--f-body);fill:var(--fg)}
 
 /* timeline */
 .tl-scroll{overflow-x:auto;position:relative}
@@ -120,12 +124,12 @@ table.mini{border-collapse:collapse;width:100%;font-size:13px}
 .tl-axis,.tl-row{display:grid;grid-template-columns:var(--label) 1fr}
 .tl-axis{height:28px;border-bottom:1px solid var(--line-strong)}
 .tl-track{position:relative;min-width:0}
-.tl-axis .tick{position:absolute;top:6px;font:500 11.5px/1 var(--f-mono);color:var(--muted);white-space:nowrap;transform:translateX(4px)}
+.tl-axis .tick{position:absolute;top:6px;font:500 12px/1 var(--f-mono);color:var(--muted);white-space:nowrap;transform:translateX(4px)}
 .tl-grid{position:absolute;inset:0 0 0 var(--label);pointer-events:none}
 .tl-grid .gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
 .tl-grid .gl.month{background:var(--line-strong)}
 .tl-grid .today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:1}
-.tl-grid .today span,.tl-grid .brk span{position:absolute;top:-1px;left:4px;font:500 11px/1 var(--f-mono);background:var(--surface);padding:2px 3px;white-space:nowrap}
+.tl-grid .today span,.tl-grid .brk span{position:absolute;top:-1px;left:4px;font:500 12px/1 var(--f-mono);background:var(--surface);padding:2px 3px;white-space:nowrap}
 .tl-grid .today span{color:var(--today)}
 .tl-grid .brk{position:absolute;top:0;bottom:0;z-index:1;border-left:1px dashed var(--line-strong);border-right:1px dashed var(--line-strong);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 22%,transparent) 0 4px,transparent 4px 9px)}
 .tl-grid .brk span{color:var(--fg2)}
@@ -163,9 +167,9 @@ table.sched{width:100%;border-collapse:collapse;min-width:980px;font-size:13.5px
 .sched .bname{font-weight:500}
 .sched .floors{font:400 12px var(--f-mono);color:var(--muted);white-space:nowrap}
 .sched tr.oos td{color:var(--muted)} .sched tr.oos .bname{text-decoration:line-through}
-.tag{display:inline-block;font:500 11px/1 var(--f-mono);letter-spacing:.04em;border:1px solid var(--line-strong);border-radius:3px;padding:2px 5px;color:var(--fg2);margin-left:6px;vertical-align:1px}
+.tag{display:inline-block;font:500 12px/1 var(--f-mono);letter-spacing:.04em;border:1px solid var(--line-strong);border-radius:3px;padding:2px 5px;color:var(--fg2);margin-left:6px;vertical-align:1px}
 .st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.st i{font-style:normal;width:16px;height:16px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:700;border:1.5px solid var(--line-strong);color:var(--muted);flex:none}
+.st i{font-style:normal;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid var(--line-strong);color:var(--muted);flex:none}
 .st[data-s="Scheduled"] i{border-color:var(--accent);color:var(--accent)}
 .st[data-s="In progress"] i{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}
 .st[data-s="Complete"] i{border-color:var(--good);background:var(--good);color:#fff}
@@ -180,6 +184,48 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 .foot p{margin:0;max-width:95ch}
 .linkbtn{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
 @media (max-width:560px){ .tl{--label:150px} .figures{gap:8px 20px} }
+/* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.hdr,.top-inner,.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.tl-axis>:first-child,.tl-row>.lbl2{position:sticky;left:0;z-index:4;background:var(--surface)}
+.swipe{display:none}
+@media (max-width:640px){
+  .wrap{padding-top:20px;gap:18px}
+  section.panel{padding:16px 14px;gap:14px}
+  .figures-panel{padding:14px}
+  .fig b{font-size:21px}
+  .panel-head p{font-size:14px}
+  .hint{font-size:13px}
+  .tl{--label:132px;min-width:640px}
+  .tl-row .lbl2{font-size:12.5px;padding-right:8px}
+  .swipe{display:block}
+  .mini td.ph{min-width:0}
+  .wi-head b{font-size:24px}
+  /* area / building table becomes one card per row */
+  table.sched{min-width:0}
+  .sched thead{display:none}
+  .sched,.sched tbody,.sched tr,.sched th,.sched td{display:block;width:100%}
+  .sched tr.grp th{padding:10px 10px;border-radius:4px}
+  .sched tr.grp .meta{display:block;margin:4px 0 0}
+  .sched tbody tr:not(.grp){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px;padding:12px 2px 14px;border-bottom:1px solid var(--line)}
+  .sched td{border:0;padding:0;text-align:left!important;min-width:0!important;max-width:none!important;width:auto;font-size:14.5px}
+  .sched td::before{content:attr(data-label);display:block;color:var(--muted);font-size:12.5px;line-height:1.3;margin-bottom:1px}
+  .sched td:nth-child(1){display:none}
+  .sched td:nth-child(2){grid-column:1/-1;font-size:16px}
+  .sched td:nth-child(2)::before{content:none}
+  .sched td:last-child,.sched td.models{grid-column:1/-1}
+  /* card order: count and done, status, start and end, work days, then long text at the bottom */
+  .sched td:nth-child(3){order:1} .sched td:nth-child(4){order:2} .sched td:nth-child(5){order:3} .sched td:nth-child(10){order:4}
+  .sched td:nth-child(7){order:5} .sched td:nth-child(8){order:6} .sched td:nth-child(9){order:7} .sched td:nth-child(6){order:8}
+  .sched td.models{order:20} .sched td:last-child{order:21}
+  .sched td:empty{display:none}
+  .sched .floors{white-space:normal;font-size:14px}
+  .phases{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .phase{padding:10px 12px}
+  .phase .name{font-size:15px}
+  .phase dl{font-size:12.5px;gap:2px 8px}
+  .mini th{white-space:normal}
+}
 @media (prefers-reduced-motion: no-preference){ .bar{transition:left .2s ease,width .2s ease} }
 </style>
 </head>
@@ -200,7 +246,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
     <h1>Printer replacement</h1>
     <p class="sub">Every site, building and floor in the printer replacement, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.1 · 5 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.2 · 5 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -272,6 +318,7 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
       <div class="panel-head">
         <h2 id="h-tl">Timeline</h2>
         <div class="legend" id="legend"></div>
+        <p class="hint swipe">Swipe sideways on the timeline to see all the dates; the names stay in view.</p>
       </div>
       <div class="tl-scroll" id="tlScroll">
         <div id="timeline"></div>
@@ -303,14 +350,14 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_Printer_Replacement_Planner.xlsx";
-const PAGE_VERSION = "1.1 · 5 Nov 2026";
+const PAGE_VERSION = "1.2 · 5 Nov 2026";
 const DONE_WORD = "replaced"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
 
 const SITE_COLOURS = { RLH:"--s-rlh", MEH:"--s-meh", SBH:"--s-sbh", RS:"--s-rs", NUH:"--s-nuh", WCH:"--s-wch" };
 const MIN_STEPS = [5,10,15,20,25,30,35,40,45,50,55,60];
-const STATUS_ICON = {"Not started":"", "Scheduled":"•", "In progress":"▶", "Complete":"✓", "On hold":"‖", "Out of scope":"–"};
+const STATUS_ICON = {"Not started":"", "Scheduled":"•", "In progress":"▶\uFE0E", "Complete":"✓\uFE0E", "On hold":"‖", "Out of scope":"–"}; // \uFE0E keeps iPhones from drawing ▶ and ✓ as emoji
 
 const $ = id => document.getElementById(id);
 const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (v==null||v===false) continue; if (k==="class") e.className=v; else if (k==="text") e.textContent=v; else e.setAttribute(k,v); } for (const k of kids) if (k!=null) e.append(k); return e; };
@@ -549,7 +596,7 @@ function renderProgress(planAtMins){
   let altEnd=null; if (alt){ const k=[...alt.daily.keys()].sort(); altEnd=parse(k[k.length-1]); if (altEnd>xMax) xMax=altEnd; }
   if (firstLog && firstLog<xMin) xMin=firstLog; if (lastLog && lastLog>xMax) xMax=lastLog; if (forecast && forecast>xMax) xMax=forecast;
   xMin=addDays(xMin,-((xMin.getDay()+6)%7)); xMax=addDays(xMax,7-((xMax.getDay()+6)%7));
-  const W=900, H=320, L=56, R=118, T=18, B=34;
+  const W=Math.round(host.getBoundingClientRect().width)||900, compact=W<560, H=compact?260:320, L=compact?44:56, R=compact?58:118, T=18, B=34;
   const xs=d=>L+(d-xMin)/(xMax-xMin)*(W-L-R), ys=v=>T+(1-v/total)*(H-T-B);
   const NS="http://www.w3.org/2000/svg";
   const S_=(tag,attrs,text)=>{ const e=document.createElementNS(NS,tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k,v); if (text!=null) e.textContent=text; return e; };
@@ -557,7 +604,8 @@ function renderProgress(planAtMins){
   const step = total>2000?500:total>800?200:100;
   for (let v=0; v<=total; v+=step){ const y=ys(v); svg.append(S_("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line)"})); svg.append(S_("text",{x:L-8,y:y+4,"text-anchor":"end",class:"ax"},nf.format(v))); }
   { const y=ys(total); svg.append(S_("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--line-strong)","stroke-dasharray":"2 3"})); svg.append(S_("text",{x:L+4,y:y-5,class:"ax"},`${nf.format(total)} printers in total`)); }
-  for (let m=new Date(xMin.getFullYear(),xMin.getMonth()+1,1); m<xMax; m=new Date(m.getFullYear(),m.getMonth()+1,1)){ const x=xs(m); svg.append(S_("line",{x1:x,x2:x,y1:H-B,y2:H-B+4,stroke:"var(--line-strong)"})); svg.append(S_("text",{x:x+3,y:H-B+16,class:"ax"},fMonth.format(m))); }
+  { const perMonth=(W-L-R)/Math.max(1,(xMax-xMin)/2.63e9), every=perMonth<46?2:1; let i=0;
+    for (let m=new Date(xMin.getFullYear(),xMin.getMonth()+1,1); m<xMax; m=new Date(m.getFullYear(),m.getMonth()+1,1), i++){ const x=xs(m); svg.append(S_("line",{x1:x,x2:x,y1:H-B,y2:H-B+4,stroke:"var(--line-strong)"})); if (i%every===0 && x<W-R-20) svg.append(S_("text",{x:x+3,y:H-B+16,class:"ax"},fMonth.format(m))); } }
   svg.append(S_("line",{x1:L,x2:W-R,y1:H-B,y2:H-B,stroke:"var(--line-strong)"}));
   if (today>=xMin && today<=xMax){ const x=xs(today); svg.append(S_("line",{x1:x,x2:x,y1:T,y2:H-B,stroke:"var(--today)","stroke-width":1.5})); svg.append(S_("text",{x:x+4,y:T+10,class:"ax",fill:"var(--today)",style:"fill:var(--today)"},"Today")); }
   const path=(pts,attrs)=>{ if (!pts.length) return; svg.append(S_("path",{d:pts.map((p,i)=>`${i?"L":"M"}${xs(p.d).toFixed(1)},${ys(p.v).toFixed(1)}`).join(" "),fill:"none","stroke-linejoin":"round",...attrs})); };
@@ -568,26 +616,27 @@ function renderProgress(planAtMins){
     placed.push({x:lx,y:ly,w}); svg.append(S_("text",{x:lx,y:ly,class:"lbl",style:`${halo}fill:${colour}`},text)); };
   const basePts=[{d:addDays(pStart,-1),v:0}, ...cumulative(baseDaily,pStart,pEnd)];
   path(basePts,{stroke:"var(--fg2)","stroke-width":2});
-  endLabel(basePts,`Plan · ${fShort.format(pEnd)}`,"var(--fg2)");
+  endLabel(basePts,compact?fShort.format(pEnd):`Plan · ${fShort.format(pEnd)}`,"var(--fg2)");
   let altPts=[]; if (alt){ const k=[...alt.daily.keys()].sort(); altPts=[{d:addDays(parse(k[0]),-1),v:0}, ...cumulative(alt.daily,parse(k[0]),altEnd)];
-    path(altPts,{stroke:"var(--muted)","stroke-width":1.5,"stroke-dasharray":"5 4"}); endLabel(altPts,`${mins} min · ${fShort.format(altEnd)}`,"var(--muted)"); }
+    path(altPts,{stroke:"var(--muted)","stroke-width":1.5,"stroke-dasharray":"5 4"}); endLabel(altPts,compact?fShort.format(altEnd):`${mins} min · ${fShort.format(altEnd)}`,"var(--muted)"); }
   let actPts=[];
   if (installed>0){ let c=0; actPts=[{d:addDays(firstLog,-1),v:0}]; for (let x=new Date(firstLog); x<=lastLog; x=addDays(x,1)){ const v=act.get(iso(x))||0; if (!isWork(x) && !v) continue; c+=v; actPts.push({d:new Date(x),v:c}); }
-    if (fcPts.length>1){ path(fcPts,{stroke:"var(--accent)","stroke-width":2,"stroke-dasharray":"2 4"}); endLabel(fcPts,`Forecast · ${fShort.format(forecast)}`,"var(--accent)"); }
+    if (fcPts.length>1){ path(fcPts,{stroke:"var(--accent)","stroke-width":2,"stroke-dasharray":"2 4"}); endLabel(fcPts,compact?fShort.format(forecast):`Forecast · ${fShort.format(forecast)}`,"var(--accent)"); }
     path(actPts,{stroke:"var(--accent)","stroke-width":2.5});
     for (const p of actPts.slice(1)) if (act.get(iso(p.d))) svg.append(S_("circle",{cx:xs(p.d),cy:ys(p.v),r:3,fill:"var(--accent)",stroke:"var(--surface)","stroke-width":1.5}));
-    const lp=actPts[actPts.length-1]; svg.append(S_("text",{x:xs(lp.d)+8,y:ys(lp.v)-12,class:"lbl",style:`${halo}fill:var(--accent)`},`Actual · ${nf.format(installed)}`)); }
+    const lp=actPts[actPts.length-1]; svg.append(S_("text",{x:xs(lp.d)+8,y:ys(lp.v)-12,class:"lbl",style:`${halo}fill:var(--accent)`},compact?nf.format(installed):`Actual · ${nf.format(installed)}`)); }
   // hover crosshair
   const cross=S_("line",{x1:0,x2:0,y1:T,y2:H-B,stroke:"var(--fg2)","stroke-width":1,opacity:0}); svg.append(cross);
   const hit=S_("rect",{x:L,y:T,width:W-L-R,height:H-T-B,fill:"transparent"}); svg.append(hit);
   const tip=$("progTip"), valAt=(pts,d)=>{ let v=null; for (const p of pts){ if (p.d<=d) v=p.v; else break; } return v; };
-  hit.addEventListener("pointermove",e=>{ const r=svg.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; let d=new Date(xMin.getTime()+(px-L)/(W-L-R)*(xMax-xMin)); d.setHours(0,0,0,0);
+  const onMove=e=>{ const r=svg.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; let d=new Date(xMin.getTime()+(px-L)/(W-L-R)*(xMax-xMin)); d.setHours(0,0,0,0);
     const cx=xs(d); cross.setAttribute("x1",cx); cross.setAttribute("x2",cx); cross.setAttribute("opacity",.4);
     const pv=valAt(basePts,d), av=lastLog && d<=lastLog ? valAt(actPts,d) : null, fv=fcPts.length && d>lastLog ? valAt(fcPts,d) : null, alv=alt? valAt(altPts,d) : null;
     tip.replaceChildren(el("b",{text:fLong.format(d)}), el("div",{text:`Plan: ${nf.format(Math.round(pv||0))} printers`}), alv!=null? el("div",{text:`At ${mins} min: ${nf.format(Math.round(alv))}`}) : null,
       av!=null? el("div",{text:`Actual: ${nf.format(Math.round(av))} printers${act.get(iso(d))?` (+${act.get(iso(d))} that day)`:""}`}) : null, fv!=null? el("div",{text:`Forecast: ${nf.format(Math.round(fv))}`}) : null);
-    const cr=$("progChart").getBoundingClientRect(); tip.hidden=false; tip.style.left=Math.max(4,Math.min(e.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(e.clientY-cr.top+14)+"px"; });
-  hit.addEventListener("pointerleave",()=>{ tip.hidden=true; cross.setAttribute("opacity",0); });
+    const cr=$("progChart").getBoundingClientRect(); tip.hidden=false; tip.style.left=Math.max(4,Math.min(e.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(e.clientY-cr.top+14)+"px"; };
+  hit.addEventListener("pointermove",onMove); hit.addEventListener("pointerdown",onMove); // pointerdown: a tap on a phone shows the figures too
+  hit.addEventListener("pointerleave",e=>{ if (e.pointerType==="touch") return; tip.hidden=true; cross.setAttribute("opacity",0); });
   host.append(svg);
   // legend
   const lg=$("progLegend"); lg.replaceChildren();
@@ -629,7 +678,7 @@ function renderVariance(baseDaily, act, from, asOf, today){
   tb.append(body);
 }
 function drawVar(host, tip, chart, days, val, tipLines, label, endLabel){
-  const W=900, H=230, L=56, R=28, T=14, B=30, n=days.length;
+  const W=Math.round(host.getBoundingClientRect().width)||900, compact=W<560, H=compact?190:230, L=compact?40:56, R=compact?12:28, T=14, B=30, n=days.length;
   const nice=v=>{ const p=Math.pow(10,Math.floor(Math.log10(v))), m=v/p; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p; };
   const M=nice(Math.max(1, ...days.map(d=>Math.abs(val(d)))));
   const ys=v=>T+(1-(v+M)/(2*M))*(H-T-B), y0=ys(0);
@@ -641,7 +690,7 @@ function drawVar(host, tip, chart, days, val, tipLines, label, endLabel){
     svg.append(S_("text",{x:L-8,y:y+4,"text-anchor":"end",class:"ax"},`${v>0?"+":"−"}${nf.format(Math.abs(v))}`)); }
   svg.append(S_("text",{x:L+6,y:T+12,class:"ax"},"Ahead"));
   svg.append(S_("text",{x:L+6,y:H-B-6,class:"ax"},"Behind"));
-  const k=Math.max(1, Math.ceil(n/8));
+  const k=Math.max(1, Math.ceil(n/Math.max(3, Math.floor((W-L-R)/58))));
   days.forEach((d,i)=>{ if (i%k===0 || i===n-1 && (n-1)%k>=Math.ceil(k/2)) svg.append(S_("text",{x:xs(i)+w/2,y:H-B+18,"text-anchor":"middle",class:"ax"},fShort.format(d.d))); });
   // bars: square at the zero line, rounded at the far end
   days.forEach((d,i)=>{ const v=val(d); if (!v) return; const x=xs(i), y1=ys(v), r=Math.min(4, w/2, Math.abs(y1-y0));
@@ -654,10 +703,11 @@ function drawVar(host, tip, chart, days, val, tipLines, label, endLabel){
   // hover: one hit area per day, wider than the bar
   const hl=S_("rect",{x:0,y:T,width:bw,height:H-T-B,fill:"var(--fg2)",opacity:0}); svg.insertBefore(hl, svg.firstChild);
   days.forEach((d,i)=>{ const h=S_("rect",{x:L+i*bw,y:T,width:bw,height:H-T-B,fill:"transparent"});
-    h.addEventListener("pointermove",ev=>{ hl.setAttribute("x",L+i*bw); hl.setAttribute("opacity",.07);
+    const onMove=ev=>{ hl.setAttribute("x",L+i*bw); hl.setAttribute("opacity",.07);
       tip.replaceChildren(el("b",{text:fLong.format(d.d)}), ...tipLines(d).map(t=>el("div",{text:t}))); tip.hidden=false;
-      const cr=chart.getBoundingClientRect(); tip.style.left=Math.max(4,Math.min(ev.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(ev.clientY-cr.top+14)+"px"; });
-    h.addEventListener("pointerleave",()=>{ tip.hidden=true; hl.setAttribute("opacity",0); });
+      const cr=chart.getBoundingClientRect(); tip.style.left=Math.max(4,Math.min(ev.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(ev.clientY-cr.top+14)+"px"; };
+    h.addEventListener("pointermove",onMove); h.addEventListener("pointerdown",onMove);
+    h.addEventListener("pointerleave",ev=>{ if (ev.pointerType==="touch") return; tip.hidden=true; hl.setAttribute("opacity",0); });
     svg.append(h); });
   host.append(svg);
 }
@@ -720,7 +770,7 @@ function renderChart(baseFin){
   if (!curve){ curve=MIN_STEPS.map(m=>{ const f=maxIso([...computePlan(m).values()].map(d=>d.end)); return {m, f, t:parse(f).getTime()}; }); }
   host.replaceChildren();
   const lo=MIN_STEPS[0], hi=MIN_STEPS[MIN_STEPS.length-1];
-  const W=560, H=230, L=78, R=16, T=16, B=34;
+  const W=Math.round(host.getBoundingClientRect().width)||560, compact=W<480, H=compact?210:230, L=compact?56:78, R=16, T=16, B=34;
   const tMin=Math.min(...curve.map(p=>p.t)), tMax=Math.max(...curve.map(p=>p.t), baseFin?parse(baseFin).getTime():0);
   const y0=new Date(tMin); y0.setDate(1); const y1=new Date(tMax); y1.setMonth(y1.getMonth()+1,1);
   const xs=m=>L+(m-lo)/(hi-lo)*(W-L-R), ys=t=>T+(1-(t-y0)/(y1-y0))*(H-T-B);
@@ -735,7 +785,7 @@ function renderChart(baseFin){
   svg.append(s("text",{x:(L+W-R)/2,y:H-2,"text-anchor":"middle",class:"ax"},"minutes per printer"));
   svg.append(s("line",{x1:L,x2:W-R,y1:H-B,y2:H-B,stroke:"var(--line-strong)"}));
   if (baseFin){ const y=ys(parse(baseFin).getTime()); svg.append(s("line",{x1:L,x2:W-R,y1:y,y2:y,stroke:"var(--fg2)","stroke-dasharray":"4 4"}));
-    svg.append(s("text",{x:W-R,y:y-5,"text-anchor":"end",class:"ax"},(model.baselineName||"baseline").replace(/\s*\(.*\)$/,""))); }
+    svg.append(s("text",{x:W-R,y:compact?y+15:y-5,"text-anchor":"end",class:"ax"},(model.baselineName||"baseline").replace(/\s*\(.*\)$/,""))); }
   svg.append(s("path",{d:curve.map((p,i)=>`${i?"L":"M"}${xs(p.m).toFixed(1)},${ys(p.t).toFixed(1)}`).join(" "),fill:"none",stroke:"var(--accent)","stroke-width":2,"stroke-linejoin":"round"}));
   for (const p of curve) svg.append(s("circle",{cx:xs(p.m),cy:ys(p.t),r:2.5,fill:"var(--accent)"}));
   const sel=curve.find(p=>p.m===mins);
@@ -750,7 +800,7 @@ function renderChart(baseFin){
     const d = baseFin ? wdDiff(parse(baseFin), parse(p.f)) : null;
     tip.replaceChildren(el("b",{text:`${p.m} minutes per printer`}), el("div",{text:`Finish ${fLong.format(parse(p.f))}`}), d===null?null:el("div",{text:d===0?`Same as the ${model.baselineName||"baseline"}`:`${signed(d)} working days`}), el("div",{class:"muted",text:"Click to show these dates"}));
     tip.hidden=false; tip.style.left=Math.max(4,Math.min(e.clientX-cr.left+12, cr.width-tip.offsetWidth-4))+"px"; tip.style.top=(e.clientY-cr.top+14)+"px"; });
-  hit.addEventListener("pointerleave",()=>tip.hidden=true);
+  hit.addEventListener("pointerleave",e=>{ if (e.pointerType!=="touch") tip.hidden=true; });
   hit.addEventListener("click",e=>{ const p=near(e); if(!p) return; tip.hidden=true; setMins(p.m); });
   svg.append(hit); host.append(svg);
 }
@@ -823,6 +873,8 @@ function renderTable(plan, ph){
     }
     t.append(tb);
   }
+  const heads=[...t.querySelectorAll("thead th")].map(th=>th.textContent);
+  for (const tr of t.querySelectorAll("tbody tr:not(.grp)")) [...tr.children].forEach((td,i)=>{ td.dataset.label=heads[i]||""; });
   const listed=model.rows.reduce((a,r)=>a+r.listed,0), oos=model.rows.reduce((a,r)=>a+r.oos,0), dup=model.rows.reduce((a,r)=>a+r.dup,0);
   $("bNote").textContent = `${nf.format(listed)} printers in the supplier's list${oos?`; ${nf.format(oos)} out of scope aren't counted`:""}. Each area is a floor of a building, or the whole building where it has fewer than 20 printers.`;
 }
@@ -850,7 +902,8 @@ function renderFoot(){
   const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.filter(Boolean).map(s=>el("div",{text:s}))); tip.hidden=false;
     const r=sc.getBoundingClientRect(); tip.style.left=Math.max(4,Math.min(cx-r.left+sc.scrollLeft+12, sc.scrollLeft+sc.clientWidth-tip.offsetWidth-8))+"px"; tip.style.top=(cy-r.top+14)+"px"; };
   sc.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
-  sc.addEventListener("pointerleave",()=>tip.hidden=true);
+  sc.addEventListener("pointerleave",e=>{ if (e.pointerType!=="touch") tip.hidden=true; });
+  sc.addEventListener("click",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
   sc.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+r.width/2,r.bottom); } });
   sc.addEventListener("focusout",()=>tip.hidden=true);
 })();
@@ -878,10 +931,14 @@ function load(buf, source){
     if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
     const wb=XLSX.read(buf,{type:"array"});
     model=readWorkbook(wb, source); curve=null; mins=model.settings.mins;
-    fillSelect(); renderAll();
     $("loader").hidden=true; $("main").hidden=false;
+    fillSelect(); renderAll(); lastW=innerWidth;
   } catch(err){ showLoader("Couldn't read the spreadsheet", err.message || String(err)); }
 }
+let lastW=0, rzT=null;
+addEventListener("resize",()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ if (model && Math.abs(innerWidth-lastW)>=8){ lastW=innerWidth; renderAll(); } },150); });
+// on a phone, tapping outside a chart or the timeline hides its figures box
+document.addEventListener("pointerdown",e=>{ if (e.pointerType==="touch" && !e.target.closest(".chart,.tl-scroll")) document.querySelectorAll(".tip").forEach(t=>t.hidden=true); });
 function showLoader(title, text){ $("loader").hidden=false; $("main").hidden=true; $("loaderTitle").textContent=title; $("loaderText").textContent=text; $("loaderPick").hidden=false; }
 function readFile(file){ if (!file) return; const fr=new FileReader(); fr.onload=()=>load(fr.result,{name:file.name, modified:file.lastModified?new Date(file.lastModified):null}); fr.readAsArrayBuffer(file); }
 $("pickBtn").addEventListener("click",()=>$("pick").click());
