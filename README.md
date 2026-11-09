@@ -39,6 +39,18 @@ Next to the summary in **At a glance** there's a photo and a rating on a scale o
 - `photo`: the image file; replace `status-photo.jpg` with another photo of the same name to change it. A copy of the current photo is also built into `index.html`, so the photo still shows if `status-photo.jpg` is missing. The current one is 120 × 120 pixels; a square photo of 250 pixels or more looks sharper on phones.
 - `show: false` hides the whole panel
 
+## Excel summary
+
+Each programme page has an **Export** section at the bottom (the **Export to Excel** link at the top of the page jumps to it). **Download Excel summary** saves a workbook with the figures as they are at that moment:
+
+- **Summary:** progress against plan, recent pace, planned and forecast finish against the baseline, and the plan settings
+- **Phases:** each phase's dates, progress and change against the baseline
+- **Buildings** (Wi-Fi) or **Areas** (printers): every building or area with its dates, progress, status and notes, in date order
+- **Daily:** planned and actual for each working day, with running totals and the forecast, ready to chart in Excel
+- **Install Log** and **Tracker Issues:** as they are in the planner
+
+The file is named with the day you download it, for example `Barts_WiFi_Refresh_Summary_2026-11-09.xlsx`. If you've picked a different number of minutes on the page, the Phases and Buildings tabs use those dates and the Summary says so. The colours and bold text come from a library the page loads from `cdn.jsdelivr.net` when you click; if a network blocks it, the file still downloads with the same figures, just without formatting.
+
 ## How the status is set
 
 The front screen rates each programme in delivery:
@@ -74,7 +86,7 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.9**, the Wi-Fi dashboard **2.2** and the printer dashboard **1.4** (6 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.9** (6 Nov 2026), the Wi-Fi dashboard **2.3** and the printer dashboard **1.5** (9 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline scrolls sideways with the names kept in view; tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.

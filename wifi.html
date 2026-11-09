@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 2.2 (6 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 2.3 (9 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="2.2">
+<meta name="version" content="2.3">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -187,6 +187,12 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 .foot{font-size:13px;color:var(--muted);display:grid;gap:6px}
 .foot p{margin:0;max-width:95ch}
 .linkbtn{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+.top-links{display:flex;flex-wrap:wrap;gap:6px 28px}
+.x-tabs{margin:12px 0 0;padding-left:20px;font-size:14.5px;max-width:95ch}
+.x-tabs li{margin:5px 0}
+.x-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:16px}
+.x-row .btn:disabled{opacity:.6;cursor:progress}
+#export{scroll-margin-top:12px}
 @media (max-width:560px){ .tl{--label:150px} .figures{gap:8px 20px} }
 /* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -245,12 +251,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 <header class="top">
   <div class="top-inner">
-    <a class="back" href="index.html">← All programmes</a>
+    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export to Excel ↓</a></div>
     <p class="eyebrow">ICT programme</p>
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 2.2 · 6 Nov 2026</span>
+    <span class="ver" id="ver">Page version 2.3 · 9 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -339,6 +345,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <div class="tbl-scroll"><table class="sched" id="sched"></table></div>
     </section>
 
+    <section class="panel" aria-labelledby="h-x" id="export">
+      <div class="panel-head">
+        <h2 id="h-x">Export</h2>
+        <p>An Excel summary of this page, with the figures as they are when you download it.</p>
+      </div>
+      <ul class="x-tabs" id="exportTabs"></ul>
+      <div class="x-row"><button class="btn primary" type="button" id="exportBtn">Download Excel summary</button><span class="hint" id="exportNote" aria-live="polite"></span></div>
+    </section>
+
     <section class="panel" id="issuesPanel" hidden>
       <details class="iss">
         <summary id="issSummary">Tracker issues</summary>
@@ -355,7 +370,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "2.2 · 6 Nov 2026";
+const PAGE_VERSION = "2.3 · 9 Nov 2026";
 const DONE_WORD = "installed"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
@@ -527,7 +542,7 @@ function phaseSummary(plan){
 /* ---------------- rendering ---------------- */
 function renderAll(){
   const plan=computePlan(mins); const ph=phaseSummary(plan);
-  renderFigures(plan, ph); renderOrder(ph); renderProgress(plan); renderInstall(plan, ph); renderTimeline(plan, ph); renderTable(plan, ph); renderIssues(); renderFoot();
+  renderFigures(plan, ph); renderOrder(ph); renderProgress(plan); renderInstall(plan, ph); renderTimeline(plan, ph); renderTable(plan, ph); renderIssues(); renderExport(); renderFoot();
 }
 
 /* ---------------- planned vs actual ---------------- */
@@ -538,7 +553,7 @@ function cumulative(daily, from, to){
   for (let x=new Date(from); x<=to; x=addDays(x,1)){ if (!isWork(x)) continue; c+=daily.get(iso(x))||0; pts.push({d:new Date(x), v:c}); }
   return pts;
 }
-let progView=null, lastPlanAtMins=null; // chart range picked by the viewer (null = automatic)
+let progView=null, lastPlanAtMins=null, stats=null; // chart range picked by the viewer (null = automatic)
 function renderProgress(planAtMins){
   const s=model.settings, today=new Date(); today.setHours(0,0,0,0);
   const total=model.rows.filter(inScope).reduce((a,r)=>a+r.aps,0);
@@ -580,6 +595,7 @@ function renderProgress(planAtMins){
   let varDays=null;
   if (installed>0){ let c=0, reach=null; for (const k of pDays){ c+=baseDaily.get(k); if (c>=installed){ reach=parse(k); break; } }
     if (reach) varDays = wdDiff(asOf, reach); } // negative = behind plan
+  stats = { total, installed, plannedToday, asOf, today, pStart, pEnd, baseDaily, act, firstLog, lastLog, pace, paceRatio, paceMins, paceDays, paceFrom, forecast, fcPts, varDays }; // for the Excel export
   // figures
   const figs=$("progFigs"); figs.replaceChildren();
   const fig=(v,l,cls)=>figs.append(el("div",{class:"fig"}, el("b",{class:cls||null,text:v}), el("span",{text:l})));
@@ -941,6 +957,211 @@ function renderFoot(){
   f.append(el("p",{}, b));
 }
 
+/* ---------------- Export: an Excel summary of this page ---------------- */
+const EXPORT = { title:"Wi-Fi access point refresh", file:"Barts_WiFi_Refresh_Summary", unit:"APs", unit1:"AP", place:"Building", places:"Buildings", floors:"Floors", extraHead:"Pre-migration issues", extra:r=>r.pre||0, extraNum:true };
+const EXCELJS_URL = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"; // formats the file; if it can't load, the file is still made, without colours
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const FMT = { int:"#,##0", signed:'+#,##0;"−"#,##0;0', pct:"0%", dec1:"0.0", date:"d mmm yyyy", stamp:"d mmm yyyy hh:mm" };
+const XC = { blue:"005EB8", pale:"E8EDEE", good:"007F3B", bad:"D5281B", muted:"4C6272", white:"FFFFFF" };
+const capFirst = t => t ? t[0].toUpperCase()+t.slice(1) : t;
+const xlDate = d => d ? (Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5 : null; // Excel day number, so dates never shift with time zones
+const xlStamp = d => (Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes())-Date.UTC(1899,11,30))/864e5;
+const colL = i => { let t="", n=i+1; while (n){ const m=(n-1)%26; t=String.fromCharCode(65+m)+t; n=Math.floor((n-1)/26); } return t; };
+function exportTabs(){
+  const U=EXPORT.unit, D=DONE_WORD, P=EXPORT.places.toLowerCase();
+  const tabs=[["Summary",`The headline figures: ${U} ${D} against plan, recent pace, finish dates against the baseline, and the plan settings`],
+    ["Phases",`Each phase with its dates, ${U} ${D} and change against the baseline`],
+    [EXPORT.places,`Every ${EXPORT.place.toLowerCase()} with its dates, ${U} ${D}, status and notes, in date order`],
+    ["Daily",`What was planned and ${D} each working day, the running totals and the forecast`],
+    ["Install Log","Every row of the Install Log tab in the spreadsheet"]];
+  if (model && model.issues.length) tabs.push(["Tracker Issues","The issues listed in the spreadsheet"]);
+  return tabs;
+}
+function renderExport(){
+  const ul=$("exportTabs"); ul.replaceChildren(...exportTabs().map(([n,d])=>el("li",{}, el("b",{text:n}), ": "+d)));
+}
+// a table tab: a header row, one row per item, then an optional total row
+function tableSheet(name, cols, rows, total){
+  const head=cols.map(c=>({v:c.h, b:true, c:XC.white, bg:XC.blue, wrap:true, al:c.fmt?"right":"left"}));
+  const cell=(c,v)=>{
+    if (v instanceof Date) return {v:xlDate(v), fmt:FMT.date};
+    const o={v:v===undefined?null:v};
+    if (typeof v==="number"){ if (c.fmt) o.fmt=FMT[c.fmt]; if (c.tone && v) o.c=(c.tone==="up"?v>0:v<0)?XC.good:XC.bad; }
+    if (c.wrap) o.wrap=true; return o; };
+  const grid=[head, ...rows.map(r=>cols.map((c,i)=>cell(c,r[i])))];
+  if (total && rows.length){ const tr=rows.length+2, last=rows.length+1;
+    grid.push(cols.map((c,i)=>{ const t=total[i];
+      if (t==null) return {v:null, bg:XC.pale};
+      if (typeof t==="string") return {v:t, b:true, bg:XC.pale};
+      const L=colL(i); return {v:t.v, f:t.f.replace("{rng}",`${L}2:${L}${last}`).replace(/\{row\}/g,tr), fmt:t.fmt, b:true, bg:XC.pale}; })); }
+  return { name, grid, widths:cols.map(c=>c.w||12), freeze:1, filter:rows.length?`A1:${colL(cols.length-1)}${rows.length+1}`:null, landscape:true, headH:32 };
+}
+function buildExport(){
+  const s=model.settings, st=stats, U=EXPORT.unit, U1=EXPORT.unit1, D=DONE_WORD, now=new Date();
+  const basePlan=computePlan(s.mins), plan=computePlan(mins), ph=phaseSummary(plan), basePh=mins===s.mins?ph:phaseSummary(basePlan);
+  const perDay=t=>Math.max(1,Math.floor(t*s.hours*60/s.mins)), two=s.teams2!=null&&s.from2;
+  const doneBy=new Map(); for (const e of model.log){ const k=e.building.toLowerCase(); doneBy.set(k,(doneBy.get(k)||0)+e.aps); }
+  const doneOf=r=>doneBy.get(r.building.toLowerCase())||0;
+  const known=new Set(model.rows.map(r=>r.building.toLowerCase()));
+  const unmatched=model.log.filter(e=>!known.has(e.building.toLowerCase())).reduce((a,e)=>a+e.aps,0);
+  const planFin=maxIso(basePh.map(p=>p.end).filter(Boolean)), selFin=maxIso(ph.map(p=>p.end).filter(Boolean)), startIso=minIso(basePh.map(p=>p.start).filter(Boolean));
+  const baseFin=maxIso(ph.map(p=>p.baseline).filter(Boolean)), bname=(model.baselineName||"baseline").replace(/\s*\(.*\)$/,"");
+  const inScopeRows=model.rows.filter(inScope), complete=inScopeRows.filter(r=>r.status==="Complete").length;
+  const sumF=(v,fmt)=>({v, f:"SUM({rng})", fmt:fmt||FMT.int}), minF=d=>({v:xlDate(d), f:"MIN({rng})", fmt:FMT.date}), maxF=d=>({v:xlDate(d), f:"MAX({rng})", fmt:FMT.date});
+  const sheets=[];
+
+  // Summary
+  const g=[];
+  const blank=()=>g.push([]);
+  const sec=t=>g.push([{v:t,b:true,c:XC.white,bg:XC.blue},{v:null,bg:XC.blue},{v:null,bg:XC.blue}]);
+  const kv=(label,val,note)=>g.push([{v:label}, {...val, al:"left"}, {v:note||null, c:XC.muted, wrap:true}]);
+  const V={ int:n=>({v:Math.round(n),fmt:FMT.int}), dec:n=>({v:Math.round(n*10)/10,fmt:FMT.dec1}), pct:x=>({v:x,fmt:FMT.pct}), date:d=>({v:xlDate(d),fmt:FMT.date}), text:t=>({v:t}),
+    signed:(n,upGood)=>({v:Math.round(n), fmt:FMT.signed, b:true, c:!Math.round(n)?null:((upGood?n>0:n<0)?XC.good:XC.bad)}) };
+  g.push([{v:`${EXPORT.title}: summary`, b:true, sz:16, c:XC.blue}]);
+  g.push([{v:"Barts Health NHS Trust · ICT programme dashboard", c:XC.muted}]);
+  blank();
+  kv("Exported", {v:xlStamp(now), fmt:FMT.stamp});
+  kv("Figures as of", V.date(st.asOf), iso(st.asOf)<iso(st.today) ? "the last day in the Install Log" : "today");
+  kv("Spreadsheet", V.text(model.source.name), model.source.modified ? `updated ${fStamp.format(model.source.modified)}` : null);
+  kv("Dashboard page version", V.text(PAGE_VERSION));
+  blank(); sec("Progress");
+  kv(`${capFirst(U)} in scope`, V.int(st.total));
+  kv(`${capFirst(U)} ${D}`, V.int(st.installed), unmatched ? `includes ${nf.format(unmatched)} logged against names that aren't on the ${EXPORT.places} tab` : null);
+  kv(`Per cent ${D}`, V.pct(st.total ? st.installed/st.total : 0));
+  kv(`Planned by ${fLong.format(st.asOf)}`, V.int(st.plannedToday), `at ${s.mins} minutes per ${U1}`);
+  if (st.installed>0){
+    const diff=Math.round(st.installed-st.plannedToday);
+    kv("Ahead (+) or behind (−) plan", V.signed(diff,true), diff===0 ? "on plan" : st.varDays ? `${Math.abs(st.varDays)} working day${Math.abs(st.varDays)===1?"":"s"} ${st.varDays>0?"ahead of":"behind"} plan` : `less than a day ${diff>0?"ahead of":"behind"} plan`);
+    if (st.paceRatio!=null){
+      kv("Recent pace", V.dec(st.pace), `${U} a day over the last ${st.paceDays} working day${st.paceDays===1?"":"s"} with work planned or logged (${fShort.format(st.paceFrom)} to ${fShort.format(st.asOf)})`);
+      kv("Recent pace against plan", V.pct(st.paceRatio));
+      kv(`Minutes per ${U1} at that pace`, V.int(st.paceMins), `the plan uses ${s.mins}`);
+    }
+  }
+  blank(); sec("Finish");
+  if (startIso) kv("Start of works", V.date(parse(startIso)));
+  if (planFin) kv("Planned finish", V.date(parse(planFin)), `at ${s.mins} minutes per ${U1}, from the spreadsheet's settings`);
+  if (baseFin){ kv(`${capFirst(bname)} finish`, V.date(parse(baseFin)), "the baseline on the Order of Works tab");
+    if (planFin) kv("Planned finish against baseline", V.signed(wdDiff(parse(baseFin),parse(planFin)),false), "working days later (+) or earlier (−)"); }
+  if (st.total && st.installed>=st.total && st.lastLog) kv("Finished", V.date(st.lastLog));
+  else if (st.forecast){ kv("Forecast finish at the recent pace", V.date(st.forecast), "the actual total so far, with the rest of the plan run at the recent pace");
+    if (baseFin) kv("Forecast against baseline", V.signed(wdDiff(parse(baseFin),st.forecast),false), "working days later (+) or earlier (−)"); }
+  if (mins!==s.mins && selFin) kv(`Finish at ${mins} minutes per ${U1}`, V.date(parse(selFin)), `picked on the page; the Phases and ${EXPORT.places} tabs use these dates`);
+  blank(); sec("Plan settings");
+  kv(`Remaining ${EXPORT.places.toLowerCase()} start`, V.date(parse(basePlan.start)), `the start date on the Order of Works tab, or the working day after the last ${EXPORT.place.toLowerCase()} marked Complete`);
+  kv(`Minutes per ${U1}`, V.int(s.mins));
+  kv("Hours a day", {v:s.hours});
+  kv("Teams of 2", {v:s.teams1}, two ? `${s.teams2} from ${fLong.format(parse(s.from2))}` : null);
+  kv(`${capFirst(U)} a day`, V.int(perDay(s.teams1)), two ? `${perDay(s.teams2)} a day from ${fLong.format(parse(s.from2))}` : null);
+  kv(EXPORT.places, V.int(inScopeRows.length), `${complete} marked Complete`);
+  blank(); sec("Tabs in this file");
+  for (const [n,d] of exportTabs()) kv(n, {v:null}, d);
+  sheets.push({ name:"Summary", grid:g, widths:[34,22,90], landscape:false });
+
+  // Phases
+  const phCols=[{h:"Phase",w:7,fmt:"int"},{h:"Site",w:7},{h:"Name",w:34},{h:capFirst(U),w:10,fmt:"int"},{h:EXPORT.places,w:11,fmt:"int"},{h:`${EXPORT.places} complete`,w:12,fmt:"int"},
+    {h:capFirst(D),w:11,fmt:"int"},{h:`Per cent ${D}`,w:10,fmt:"pct"},{h:"Start",w:13},{h:"End",w:13},{h:"Working days",w:10,fmt:"int"},{h:`${capFirst(bname)} end`,w:14},{h:"Against baseline (working days)",w:15,fmt:"signed",tone:"down"}];
+  const phRows=ph.map(p=>{ const inst=model.rows.filter(r=>r.phase===p.no).reduce((a,r)=>a+doneOf(r),0); const s0=p.start&&parse(p.start), e0=p.end&&parse(p.end), b0=p.baseline&&parse(p.baseline);
+    return [p.no, p.site, p.label, p.aps, p.buildings, p.done, inst, p.aps?inst/p.aps:0, s0||null, e0||null, s0&&e0?workDays(s0,e0):null, b0||null, b0&&e0?wdDiff(b0,e0):null]; });
+  const phInst=phRows.reduce((a,r)=>a+r[6],0), phAps=ph.reduce((a,p)=>a+p.aps,0), phStarts=phRows.map(r=>r[8]).filter(Boolean), phEnds=phRows.map(r=>r[9]).filter(Boolean), phBase=phRows.map(r=>r[11]).filter(Boolean);
+  sheets.push(tableSheet("Phases", phCols, phRows, ["Total",null,null,sumF(phAps),sumF(ph.reduce((a,p)=>a+p.buildings,0)),sumF(ph.reduce((a,p)=>a+p.done,0)),sumF(phInst),
+    {v:phAps?phInst/phAps:0, f:"IF(D{row}=0,0,G{row}/D{row})", fmt:FMT.pct}, phStarts.length?minF(new Date(Math.min(...phStarts))):null, phEnds.length?maxF(new Date(Math.max(...phEnds))):null, null, phBase.length?maxF(new Date(Math.max(...phBase))):null, null]));
+
+  // Buildings (or areas), in date order
+  const LAST="9999-12-31";
+  const bCols=[{h:"Order",w:7,fmt:"int"},{h:"Site",w:7},{h:EXPORT.place,w:36},{h:EXPORT.floors,w:16},{h:capFirst(U),w:9,fmt:"int"},{h:capFirst(D),w:10,fmt:"int"},{h:"Remaining",w:10,fmt:"int"},
+    {h:EXPORT.extraHead,w:EXPORT.extraNum?12:40,fmt:EXPORT.extraNum?"int":null,wrap:!EXPORT.extraNum},{h:"Start",w:13},{h:"End",w:13},{h:"Working days",w:9,fmt:"int"},{h:"Fixed dates",w:8},{h:"Status",w:12},{h:"Notes",w:60,wrap:true}];
+  const bList=model.rows.map(r=>({r,d:plan.get(r.id)})).sort((a,b)=>((a.d&&a.d.start)||LAST).localeCompare((b.d&&b.d.start)||LAST) || ((a.d&&a.d.end)||LAST).localeCompare((b.d&&b.d.end)||LAST) || a.r.order-b.r.order);
+  const bRows=bList.map(({r,d})=>{ const n=inScope(r)?r.aps:0, k=doneOf(r), s0=d&&parse(d.start), e0=d&&parse(d.end);
+    return [r.order, r.site, r.building, r.floors||null, n, k, Math.max(0,n-k), EXPORT.extra(r)||(EXPORT.extraNum?0:null), s0||null, e0||null, s0&&e0?workDays(s0,e0):null, d&&d.fixed?"Yes":null, r.status, r.notes||(r.status==="Out of scope"&&r.oos?`${r.oos} out of scope`:null)]; });
+  const bStarts=bRows.map(r=>r[8]).filter(Boolean), bEnds=bRows.map(r=>r[9]).filter(Boolean);
+  sheets.push(tableSheet(EXPORT.places, bCols, bRows, ["Total",null,null,null,sumF(bRows.reduce((a,r)=>a+r[4],0)),sumF(bRows.reduce((a,r)=>a+r[5],0)),sumF(bRows.reduce((a,r)=>a+r[6],0)),
+    EXPORT.extraNum?sumF(bRows.reduce((a,r)=>a+(r[7]||0),0)):null, bStarts.length?minF(new Date(Math.min(...bStarts))):null, bEnds.length?maxF(new Date(Math.max(...bEnds))):null, null,null,null,null]));
+
+  // Daily: plan, actual and forecast for each working day
+  const dCols=[{h:"Date",w:13},{h:"Planned that day",w:11,fmt:"int"},{h:"Planned to date",w:11,fmt:"int"},{h:`${capFirst(D)} that day`,w:11,fmt:"int"},{h:`${capFirst(D)} to date`,w:11,fmt:"int"},
+    {h:"Ahead (+) or behind (−) to date",w:14,fmt:"signed",tone:"up"},{h:"Forecast to date",w:11,fmt:"int"}];
+  const fc=new Map(st.fcPts.map(p=>[iso(p.d), p.v]));
+  const from=st.firstLog && st.firstLog<st.pStart ? st.firstLog : st.pStart;
+  const to=[st.pEnd, st.forecast, st.lastLog].filter(Boolean).reduce((a,b)=>a>b?a:b);
+  const dRows=[]; let cp=0, ca=0;
+  for (let x=new Date(from); x<=to; x=addDays(x,1)){ const k=iso(x), p=Math.round(st.baseDaily.get(k)||0), a=st.act.get(k)||0;
+    if (!isWork(x) && !p && !a) continue;
+    cp+=p; const past=x<=st.asOf; if (past) ca+=a;
+    dRows.push([new Date(x), p, cp, past?a:null, past?ca:null, past?ca-cp:null, fc.has(k)?Math.round(fc.get(k)):null]); }
+  sheets.push(tableSheet("Daily", dCols, dRows, ["Total", sumF(cp), null, sumF(ca), null, null, null]));
+
+  // Install Log as it is in the spreadsheet
+  const lCols=[{h:"Date",w:13},{h:EXPORT.place,w:36},{h:`${capFirst(U)} ${D}`,w:12,fmt:"int"},{h:"Notes",w:80,wrap:true}];
+  const lRows=model.log.map(e=>[parse(e.date), e.building, e.aps, e.notes||null]);
+  sheets.push(tableSheet("Install Log", lCols, lRows, ["Total",null,sumF(lRows.reduce((a,r)=>a+r[2],0)),null]));
+
+  // Tracker Issues, if the spreadsheet lists any
+  if (model.issues.length){
+    const keys=[]; for (const i of model.issues) for (const k of Object.keys(i)) if (!keys.includes(k)) keys.push(k);
+    const W={"#":5, issue:40, where:30, detail:60, "suggested fix":50, owner:16, status:12};
+    sheets.push(tableSheet("Tracker Issues", keys.map(k=>({h:k==="#"?"#":capFirst(k), w:W[k]||24, wrap:k!=="#"})), model.issues.map(i=>keys.map(k=>i[k]||null)), null));
+  }
+  return sheets;
+}
+async function writeFormatted(sheets){
+  const wb=new window.ExcelJS.Workbook(); wb.creator="Barts Health ICT programme dashboard"; wb.created=new Date();
+  for (const sh of sheets){
+    const ws=wb.addWorksheet(sh.name, { views: sh.freeze?[{state:"frozen", ySplit:sh.freeze}]:[], pageSetup:{paperSize:9, orientation:sh.landscape?"landscape":"portrait", fitToPage:true, fitToWidth:1, fitToHeight:0} });
+    ws.columns=sh.widths.map(w=>({width:w}));
+    sh.grid.forEach((row,ri)=>{ const xr=ws.getRow(ri+1);
+      row.forEach((c,ci)=>{ if (!c) return; const cell=xr.getCell(ci+1);
+        if (c.f) cell.value={formula:c.f, result:c.v}; else if (c.v!=null) cell.value=c.v;
+        if (c.fmt) cell.numFmt=c.fmt;
+        const font={name:"Arial", size:c.sz||10}; if (c.b) font.bold=true; if (c.c) font.color={argb:"FF"+c.c}; cell.font=font;
+        if (c.bg) cell.fill={type:"pattern", pattern:"solid", fgColor:{argb:"FF"+c.bg}};
+        cell.alignment={vertical:"top", wrapText:!!c.wrap, ...(c.al?{horizontal:c.al}:{})};
+      });
+      if (ri===0 && sh.headH) xr.height=sh.headH;
+    });
+    if (sh.filter) ws.autoFilter=sh.filter;
+  }
+  return new Blob([await wb.xlsx.writeBuffer()], {type:XLSX_MIME});
+}
+function writePlain(sheets){ // SheetJS, which the page already uses: same figures and formulas, no colours
+  const wb=XLSX.utils.book_new();
+  for (const sh of sheets){ const ws={}; let maxC=sh.widths.length-1;
+    sh.grid.forEach((row,ri)=>row.forEach((c,ci)=>{ if (!c || (c.v==null && !c.f)) return; maxC=Math.max(maxC,ci);
+      const cell = typeof c.v==="number" ? {t:"n", v:c.v} : {t:"s", v:String(c.v??"")};
+      if (c.f) cell.f=c.f; if (c.fmt) cell.z=c.fmt; ws[XLSX.utils.encode_cell({r:ri,c:ci})]=cell; }));
+    ws["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:Math.max(0,sh.grid.length-1), c:maxC}});
+    ws["!cols"]=sh.widths.map(w=>({wch:w}));
+    if (sh.filter) ws["!autofilter"]={ref:sh.filter};
+    XLSX.utils.book_append_sheet(wb, ws, sh.name); }
+  return new Blob([XLSX.write(wb,{bookType:"xlsx", type:"array", compression:true})], {type:XLSX_MIME});
+}
+let excelJsP=null;
+function loadExcelJS(){
+  if (window.ExcelJS) return Promise.resolve(true);
+  if (!excelJsP) excelJsP=new Promise(res=>{ const sc=document.createElement("script"); sc.src=EXCELJS_URL;
+    const t=setTimeout(()=>res(!!window.ExcelJS), 20000);
+    sc.onload=()=>{ clearTimeout(t); res(!!window.ExcelJS); }; sc.onerror=()=>{ clearTimeout(t); excelJsP=null; res(false); }; document.head.append(sc); });
+  return excelJsP;
+}
+function saveBlob(blob, name){
+  const a=el("a",{href:URL.createObjectURL(blob), download:name}); document.body.append(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+async function exportExcel(){
+  const btn=$("exportBtn"), note=$("exportNote"); if (!model) return;
+  btn.disabled=true; note.textContent="Making the file…";
+  try {
+    const sheets=buildExport(), name=`${EXPORT.file}_${iso(new Date())}.xlsx`;
+    let blob=null, plain=false;
+    if (await loadExcelJS()){ try { blob=await writeFormatted(sheets); } catch(e){ console.error(e); } }
+    if (!blob){ blob=writePlain(sheets); plain=true; }
+    saveBlob(blob, name);
+    note.textContent = `Downloaded ${name}${plain?". It has no colours or bold text because the formatting library couldn't load on this network; the figures are the same":""}.`;
+  } catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}`; }
+  finally { btn.disabled=false; }
+}
+$("exportBtn").addEventListener("click", exportExcel);
+
 /* tooltips for timeline bars */
 (function(){
   const tip=$("tip"), sc=$("tlScroll");
@@ -977,7 +1198,7 @@ function load(buf, source){
     const wb=XLSX.read(buf,{type:"array"});
     model=readWorkbook(wb, source); curve=null; mins=model.settings.mins;
     $("loader").hidden=true; $("main").hidden=false;
-    fillSelect(); renderAll(); lastW=innerWidth;
+    fillSelect(); renderAll(); lastW=innerWidth; $("exportJump").hidden=false;
   } catch(err){ showLoader("Couldn't read the spreadsheet", err.message || String(err)); }
 }
 let lastW=0, rzT=null;
