@@ -41,7 +41,7 @@ Next to the summary in **At a glance** there's a photo and a rating on a scale o
 
 ## Excel summary
 
-Each programme page has an **Export** section at the bottom (the **Export to Excel** link at the top of the page jumps to it). **Download Excel summary** saves a workbook with the figures as they are at that moment:
+Each programme page has an **Export** section at the bottom (the **Export** link at the top of the page jumps to it). **Download Excel summary** saves a workbook with the figures as they are at that moment:
 
 - **Summary:** progress against plan, recent pace, planned and forecast finish against the baseline, and the plan settings
 - **Phases:** each phase's dates, progress and change against the baseline
@@ -50,6 +50,16 @@ Each programme page has an **Export** section at the bottom (the **Export to Exc
 - **Install Log** and **Tracker Issues:** as they are in the planner
 
 The file is named with the day you download it, for example `Barts_WiFi_Refresh_Summary_2026-11-09.xlsx`. If you've picked a different number of minutes on the page, the Phases and Buildings tabs use those dates and the Summary says so. The colours and bold text come from a library the page loads from `cdn.jsdelivr.net` when you click; if a network blocks it, the file still downloads with the same figures, just without formatting.
+
+## A copy of a dashboard for SharePoint or Teams
+
+**Download web page**, in the same Export section, saves the whole dashboard as one HTML file, for example `Barts_WiFi_Refresh_Dashboard_2026-11-10.html`. The figures, the Trust logo (once it's in the repository) and the Excel summary are built into it. It doesn't need the spreadsheet, the internet or any other file, so it works offline and sends nothing anywhere.
+
+- **Keeping it on SharePoint or Teams:** upload it to a document library or a channel's Files. When someone clicks it, SharePoint downloads it rather than showing it, and it opens in their browser from there. Files synced with OneDrive open with a double-click. It also works as an email attachment.
+- **It's a snapshot.** It shows the figures as they were when it was saved, and says so at the top. Download a new one after the planner is updated.
+- Charts, tooltips, the minutes setting and the views all still work. The link back to the other pages is hidden, because they aren't in the file. **Download Excel summary** in the copy gives the Excel file made at the same time.
+
+**Why SharePoint downloads it instead of showing it:** SharePoint Online won't run web pages kept in a document library. It handles .html files in "strict" mode, which Microsoft no longer lets tenants turn off. The old workaround was to rename the file to .aspx, which needs "custom script" allowed on the site. Since 2024 Microsoft switches custom script off again after 24 hours. Since March 2026 SharePoint has also enforced a content security policy that blocks scripts from places it doesn't trust, including inline scripts. To show a dashboard inside a SharePoint page itself, it would need rebuilding as a SharePoint Framework (SPFx) web part, which the tenant's administrators would have to approve and install.
 
 ## How the status is set
 
@@ -86,7 +96,7 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.9** (6 Nov 2026), the Wi-Fi dashboard **2.3** and the printer dashboard **1.5** (9 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.9** (6 Nov 2026), the Wi-Fi dashboard **2.4** and the printer dashboard **1.6** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline scrolls sideways with the names kept in view; tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.

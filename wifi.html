@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 2.3 (9 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 2.4 (10 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="2.3">
+<meta name="version" content="2.4">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -188,7 +188,11 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 .foot p{margin:0;max-width:95ch}
 .linkbtn{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
 .top-links{display:flex;flex-wrap:wrap;gap:6px 28px}
-.x-tabs{margin:12px 0 0;padding-left:20px;font-size:14.5px;max-width:95ch}
+.x-tabs{margin:8px 0 0;padding-left:20px;font-size:14.5px;max-width:95ch}
+.x-h{font-size:17px;margin:20px 0 0}
+#xlPart .x-h{margin-top:8px}
+.x-p{margin:8px 0 0;font-size:14.5px;max-width:95ch}
+#snapPart{border-top:1px solid var(--line);margin-top:22px}
 .x-tabs li{margin:5px 0}
 .x-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:16px}
 .x-row .btn:disabled{opacity:.6;cursor:progress}
@@ -251,12 +255,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 <header class="top">
   <div class="top-inner">
-    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export to Excel ↓</a></div>
+    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export ↓</a></div>
     <p class="eyebrow">ICT programme</p>
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 2.3 · 9 Nov 2026</span>
+    <span class="ver" id="ver">Page version 2.4 · 10 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -348,10 +352,18 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <section class="panel" aria-labelledby="h-x" id="export">
       <div class="panel-head">
         <h2 id="h-x">Export</h2>
-        <p>An Excel summary of this page, with the figures as they are when you download it.</p>
+        <p>Take this page's figures away as a spreadsheet, or as a copy of the page in one file.</p>
       </div>
-      <ul class="x-tabs" id="exportTabs"></ul>
-      <div class="x-row"><button class="btn primary" type="button" id="exportBtn">Download Excel summary</button><span class="hint" id="exportNote" aria-live="polite"></span></div>
+      <div id="xlPart">
+        <h3 class="x-h">Excel summary</h3>
+        <ul class="x-tabs" id="exportTabs"></ul>
+        <div class="x-row"><button class="btn primary" type="button" id="exportBtn">Download Excel summary</button><span class="hint" id="exportNote" aria-live="polite"></span></div>
+      </div>
+      <div id="snapPart">
+        <h3 class="x-h">Web page for SharePoint or Teams</h3>
+        <p class="x-p">This whole page in a single file, with the figures built in. It doesn't need the spreadsheet, the internet or any other file, so it opens in a browser wherever it's kept: downloaded from SharePoint or Teams, synced with OneDrive, or attached to an email. It doesn't update itself, so download a new one when the planner changes.</p>
+        <div class="x-row"><button class="btn primary" type="button" id="snapBtn">Download web page</button><span class="hint" id="snapNote" aria-live="polite"></span></div>
+      </div>
     </section>
 
     <section class="panel" id="issuesPanel" hidden>
@@ -365,14 +377,15 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   </main>
 </div>
 
-<script>
+<script id="app">
 (() => {
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "2.3 · 9 Nov 2026";
+const PAGE_VERSION = "2.4 · 10 Nov 2026";
 const DONE_WORD = "installed"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
+const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"]; // keep in step with the version text in the header
 
 const SITE_COLOURS = { RLH:"--s-rlh", MEH:"--s-meh", SBH:"--s-sbh", RS:"--s-rs", NUH:"--s-nuh", WCH:"--s-wch" };
@@ -491,6 +504,7 @@ function readWorkbook(wb, source){
 }
 
 /* ---------------- working days and the schedule ---------------- */
+const todayDate = () => { const t=SNAP?new Date(SNAP.savedAt):new Date(); t.setHours(0,0,0,0); return t; };
 const isWork = d => { const w=d.getDay(); return w>0 && w<6 && !model.nwd.has(iso(d)); };
 const nextWork = d => { let x=new Date(d); while(!isWork(x)) x=addDays(x,1); return x; };
 const workDays = (a,b) => { let n=0; for (let x=new Date(a); x<=b; x=addDays(x,1)) if (isWork(x)) n++; return n; };
@@ -555,7 +569,7 @@ function cumulative(daily, from, to){
 }
 let progView=null, lastPlanAtMins=null, stats=null; // chart range picked by the viewer (null = automatic)
 function renderProgress(planAtMins){
-  const s=model.settings, today=new Date(); today.setHours(0,0,0,0);
+  const s=model.settings, today=todayDate();
   const total=model.rows.filter(inScope).reduce((a,r)=>a+r.aps,0);
   const base=computePlan(s.mins); const baseDaily=base.daily;
   const pDays=[...baseDaily.keys()].sort(), pStart=parse(pDays[0]), pEnd=parse(pDays[pDays.length-1]);
@@ -884,7 +898,7 @@ function renderTimeline(plan, ph){
     run.push(d);
   }
   flush();
-  const today=new Date(); today.setHours(0,0,0,0);
+  const today=todayDate();
   if (today>=min && today<max) grid.append(el("div",{class:"today",style:`left:${x(today)}%`}, el("span",{text:"Today"})));
   tl.append(axis); const body=el("div",{style:"position:relative"}); body.append(grid);
   // Always chronological: phases by start date, and buildings within each phase by start then end date (order of works breaks ties)
@@ -950,6 +964,11 @@ function renderIssues(){
 }
 function renderFoot(){
   const f=$("foot"); f.replaceChildren();
+  if (SNAP){ // a saved copy can't read or open a spreadsheet
+    f.append(el("p",{text:`A saved copy of the dashboard, made from ${model.source.name} on ${fStamp.format(new Date(SNAP.savedAt))}. It doesn't read the spreadsheet, so the figures stay as they were then.`}),
+      el("p",{text:"Work days are Monday to Friday, leaving out the bank holidays and other days listed on the spreadsheet's Non-Working Days tab."}),
+      el("p",{text:`Page version ${SNAP.page||PAGE_VERSION}.`}));
+    return; }
   f.append(el("p",{text:`To change the plan, edit ${XLSX_FILE} (settings on the Order of Works tab; fixed dates, status and notes on the Buildings tab) and upload it again in place of the old copy. This page reads it each time it opens.`}));
   f.append(el("p",{text:"Work days are Monday to Friday, leaving out the bank holidays and other days listed on the spreadsheet's Non-Working Days tab."}));
   f.append(el("p",{text:`Page version ${PAGE_VERSION}.`}));
@@ -958,7 +977,7 @@ function renderFoot(){
 }
 
 /* ---------------- Export: an Excel summary of this page ---------------- */
-const EXPORT = { title:"Wi-Fi access point refresh", file:"Barts_WiFi_Refresh_Summary", unit:"APs", unit1:"AP", place:"Building", places:"Buildings", floors:"Floors", extraHead:"Pre-migration issues", extra:r=>r.pre||0, extraNum:true };
+const EXPORT = { title:"Wi-Fi access point refresh", file:"Barts_WiFi_Refresh_Summary", snapFile:"Barts_WiFi_Refresh_Dashboard", unit:"APs", unit1:"AP", place:"Building", places:"Buildings", floors:"Floors", extraHead:"Pre-migration issues", extra:r=>r.pre||0, extraNum:true };
 const EXCELJS_URL = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"; // formats the file; if it can't load, the file is still made, without colours
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const FMT = { int:"#,##0", signed:'+#,##0;"−"#,##0;0', pct:"0%", dec1:"0.0", date:"d mmm yyyy", stamp:"d mmm yyyy hh:mm" };
@@ -1149,6 +1168,7 @@ function saveBlob(blob, name){
 }
 async function exportExcel(){
   const btn=$("exportBtn"), note=$("exportNote"); if (!model) return;
+  if (SNAP && SNAP.xlsx){ saveBlob(dataUrlToBlob(SNAP.xlsx), SNAP.xlsxName); note.textContent=`Downloaded ${SNAP.xlsxName}, made with this copy on ${fLong.format(new Date(SNAP.savedAt))}.`; return; }
   btn.disabled=true; note.textContent="Making the file…";
   try {
     const sheets=buildExport(), name=`${EXPORT.file}_${iso(new Date())}.xlsx`;
@@ -1161,6 +1181,51 @@ async function exportExcel(){
   finally { btn.disabled=false; }
 }
 $("exportBtn").addEventListener("click", exportExcel);
+
+/* ---------------- Export: the whole page as one file, figures built in (for SharePoint or Teams) ---------------- */
+const blobToDataUrl = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
+const dataUrlToBlob = u => { const [h,b64]=u.split(","); const bin=atob(b64); const a=new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new Blob([a],{type:(h.match(/^data:([^;,]+)/)||[])[1]||"application/octet-stream"}); };
+async function makeSnapshot(){
+  const btn=$("snapBtn"), note=$("snapNote"); if (!model) return;
+  btn.disabled=true; note.textContent="Making the file…";
+  try {
+    const now=new Date(), stamp=iso(now), name=`${EXPORT.snapFile}_${stamp}.html`;
+    // the Excel summary goes inside the copy, so its download button works there too
+    let xlsx=null;
+    try { const sheets=buildExport(); let blob=null;
+      if (await loadExcelJS()){ try { blob=await writeFormatted(sheets); } catch(e){ console.error(e); } }
+      if (!blob) blob=writePlain(sheets); xlsx=await blobToDataUrl(blob); } catch(e){ console.error(e); }
+    // the Trust logo, if this page has it, is built in as well
+    let logo=null; const img=$("logo");
+    if (!img.hidden && img.naturalWidth){ try { logo=await blobToDataUrl(await (await fetch(img.currentSrc||img.src)).blob()); } catch(e){ console.error(e); } }
+    const data={ v:1, savedAt:now.toISOString(), page:PAGE_VERSION, mins, progView, logo, xlsx, xlsxName:`${EXPORT.file}_${stamp}.xlsx`,
+      model:{...model, phases:[...model.phases], nwd:[...model.nwd], source:{...model.source, modified:model.source.modified?model.source.modified.toISOString():null}} };
+    const root=document.documentElement.cloneNode(true);
+    // nothing is fetched from the internet: no spreadsheet reader, no web fonts (Arial is used instead)
+    root.querySelectorAll('script[src],link[rel="preconnect"],link[href*="fonts.googleapis"],a[download]').forEach(n=>n.remove());
+    const li=root.querySelector("#logo"), lt=root.querySelector("#logoText");
+    if (logo){ li.setAttribute("src",logo); li.hidden=false; lt.hidden=true; } else { li.removeAttribute("src"); li.hidden=true; lt.hidden=false; }
+    for (const id of ["exportNote","snapNote"]) root.querySelector("#"+id).textContent="";
+    root.querySelectorAll(".tip").forEach(t=>t.hidden=true);
+    const tag=document.createElement("script"); tag.textContent="window.SNAPSHOT="+JSON.stringify(data).replace(/</g,"\\u003c")+";";
+    root.querySelector("#app").before(tag);
+    const html="<!DOCTYPE html>\n"+root.outerHTML;
+    saveBlob(new Blob([html],{type:"text/html;charset=utf-8"}), name);
+    note.textContent=`Downloaded ${name} (${Math.max(1,Math.round(html.length/1024))} KB).`;
+  } catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}`; }
+  finally { btn.disabled=false; }
+}
+$("snapBtn").addEventListener("click", makeSnapshot);
+// when this page is a saved copy: no links to the other pages, which aren't saved with it, and say it doesn't update
+function applySnapshotMode(){
+  document.body.classList.add("snapshot");
+  document.querySelectorAll('a[href="index.html"]').forEach(a=>{ if (a.classList.contains("back")) a.hidden=true; else a.removeAttribute("href"); });
+  const saved=new Date(SNAP.savedAt);
+  document.querySelector(".top .sub").textContent=`A saved copy of the dashboard, made on ${fLong.format(saved)} at ${saved.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}. The figures in it don't change; a new copy is needed when the planner is updated.`;
+  $("ver").textContent=`Saved copy · page version ${SNAP.page||PAGE_VERSION}`;
+  $("snapPart").hidden=true;
+  if (!SNAP.xlsx) $("xlPart").hidden=true;
+}
 
 /* tooltips for timeline bars */
 (function(){
@@ -1176,10 +1241,10 @@ $("exportBtn").addEventListener("click", exportExcel);
 
 /* logo: use the first file that loads; otherwise show the Trust name as text */
 (function(){
-  const img=$("logo"), txt=$("logoText"); let i=0;
+  const img=$("logo"), txt=$("logoText"); let i=0; const files = SNAP ? (SNAP.logo?[SNAP.logo]:[]) : LOGO_FILES;
   img.addEventListener("load",()=>{ img.hidden=false; txt.hidden=true; });
-  img.addEventListener("error",()=>{ if (i<LOGO_FILES.length) img.src=LOGO_FILES[i++]; else { img.hidden=true; txt.hidden=false; } });
-  if (LOGO_FILES.length) img.src=LOGO_FILES[i++]; else txt.hidden=false;
+  img.addEventListener("error",()=>{ if (i<files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; } });
+  if (files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; }
 })();
 
 /* ---------------- controls and loading ---------------- */
@@ -1215,7 +1280,14 @@ drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("ov
 drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
 drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("over"); readFile(e.dataTransfer.files[0]); });
 
-(async () => {
+function bootSnapshot(){
+  const m=SNAP.model; m.phases=new Map(m.phases); m.nwd=new Map(m.nwd); if (m.source.modified) m.source.modified=new Date(m.source.modified);
+  applySnapshotMode();
+  model=m; curve=null; mins=SNAP.mins||m.settings.mins; progView=SNAP.progView||null;
+  $("loader").hidden=true; $("main").hidden=false;
+  fillSelect(); renderAll(); lastW=innerWidth; $("exportJump").hidden=false;
+}
+if (SNAP) bootSnapshot(); else (async () => {
   try {
     const res = await fetch(XLSX_FILE, {cache:"no-store"});
     if (!res.ok) throw new Error(`${res.status}`);
