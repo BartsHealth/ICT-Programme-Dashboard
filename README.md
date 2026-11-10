@@ -51,6 +51,16 @@ Each programme page has an **Export** section at the bottom (the **Export** link
 
 The file is named with the day you download it, for example `Barts_WiFi_Refresh_Summary_2026-11-09.xlsx`. If you've picked a different number of minutes on the page, the Phases and Buildings tabs use those dates and the Summary says so. The colours and bold text come from a library the page loads from `cdn.jsdelivr.net` when you click; if a network blocks it, the file still downloads with the same figures, just without formatting.
 
+## Everything in one file, from the front screen
+
+The front screen has an **Export** section near the bottom. **Download web page (all programmes)** saves one HTML file, for example `Barts_ICT_Programmes_2026-11-10.html`, with:
+
+- the overview as it is now, including the status of each programme and the rating
+- the full Wi-Fi and printer dashboards, on tabs at the top of the file (**Overview**, **Wi-Fi**, **Printers**). The **Open the … dashboard** buttons on the overview go to the same tabs, and the browser's Back button returns to the overview.
+- each dashboard's Excel summary, from **Download Excel summary** on its tab
+
+To make the file, the front screen opens each dashboard out of sight and takes a saved copy of it, which takes a few seconds. Do this from the website, not from a copy saved on your computer. The file is about 0.7 MB and works offline, like the single-dashboard copies described below. Keep it on SharePoint or Teams, or send it by email.
+
 ## A copy of a dashboard for SharePoint or Teams
 
 **Download web page**, in the same Export section, saves the whole dashboard as one HTML file, for example `Barts_WiFi_Refresh_Dashboard_2026-11-10.html`. The figures, the Trust logo (once it's in the repository) and the Excel summary are built into it. It doesn't need the spreadsheet, the internet or any other file, so it works offline and sends nothing anywhere.
@@ -96,7 +106,7 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.9** (6 Nov 2026), the Wi-Fi dashboard **2.4** and the printer dashboard **1.6** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.10**, the Wi-Fi dashboard **2.5** and the printer dashboard **1.7** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline scrolls sideways with the names kept in view; tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.

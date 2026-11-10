@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Printer Replacement Planner page, version 1.6 (10 Nov 2026). Built from the Wi-Fi planner page (2.4) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Printer Replacement Planner page, version 1.7 (10 Nov 2026). Built from the Wi-Fi planner page (2.5) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="1.6">
+<meta name="version" content="1.7">
 <title>Printer Replacement Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health printer replacement, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -262,7 +262,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <h1>Printer replacement</h1>
     <p class="sub">Every site, building and floor in the printer replacement, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.6 · 10 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.7 · 10 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -384,7 +384,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_Printer_Replacement_Planner.xlsx";
-const PAGE_VERSION = "1.6 · 10 Nov 2026";
+const PAGE_VERSION = "1.7 · 10 Nov 2026";
 const DONE_WORD = "replaced"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
@@ -1188,10 +1188,7 @@ $("exportBtn").addEventListener("click", exportExcel);
 /* ---------------- Export: the whole page as one file, figures built in (for SharePoint or Teams) ---------------- */
 const blobToDataUrl = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
 const dataUrlToBlob = u => { const [h,b64]=u.split(","); const bin=atob(b64); const a=new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new Blob([a],{type:(h.match(/^data:([^;,]+)/)||[])[1]||"application/octet-stream"}); };
-async function makeSnapshot(){
-  const btn=$("snapBtn"), note=$("snapNote"); if (!model) return;
-  btn.disabled=true; note.textContent="Making the file…";
-  try {
+async function buildSnapshotHtml(){
     const now=new Date(), stamp=iso(now), name=`${EXPORT.snapFile}_${stamp}.html`;
     // the Excel summary goes inside the copy, so its download button works there too
     let xlsx=null;
@@ -1212,13 +1209,22 @@ async function makeSnapshot(){
     root.querySelectorAll(".tip").forEach(t=>t.hidden=true);
     const tag=document.createElement("script"); tag.textContent="window.SNAPSHOT="+JSON.stringify(data).replace(/</g,"\\u003c")+";";
     root.querySelector("#app").before(tag);
-    const html="<!DOCTYPE html>\n"+root.outerHTML;
+    return { html:"<!DOCTYPE html>\n"+root.outerHTML, name };
+}
+async function makeSnapshot(){
+  const btn=$("snapBtn"), note=$("snapNote"); if (!model) return;
+  btn.disabled=true; note.textContent="Making the file…";
+  try {
+    const {html, name}=await buildSnapshotHtml();
     saveBlob(new Blob([html],{type:"text/html;charset=utf-8"}), name);
     note.textContent=`Downloaded ${name} (${Math.max(1,Math.round(html.length/1024))} KB).`;
   } catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}`; }
   finally { btn.disabled=false; }
 }
 $("snapBtn").addEventListener("click", makeSnapshot);
+// lets the front screen (index.html) put a saved copy of this page into its own one-file export
+let loadFailed=null;
+window.dashboard = { ready:()=>!!model, failed:()=>loadFailed, snapshot:buildSnapshotHtml };
 // when this page is a saved copy: no links to the other pages, which aren't saved with it, and say it doesn't update
 function applySnapshotMode(){
   document.body.classList.add("snapshot");
@@ -1274,7 +1280,7 @@ for (const [id,v] of [["viewSoFar","sofar"],["viewAll","all"]]) document.getElem
 addEventListener("resize",()=>{ clearTimeout(rzT); rzT=setTimeout(()=>{ if (model && Math.abs(innerWidth-lastW)>=8){ lastW=innerWidth; renderAll(); } },150); });
 // on a phone, tapping outside a chart or the timeline hides its figures box
 document.addEventListener("pointerdown",e=>{ if (e.pointerType==="touch" && !e.target.closest(".chart,.tl-scroll")) document.querySelectorAll(".tip").forEach(t=>t.hidden=true); });
-function showLoader(title, text){ $("loader").hidden=false; $("main").hidden=true; $("loaderTitle").textContent=title; $("loaderText").textContent=text; $("loaderPick").hidden=false; }
+function showLoader(title, text){ loadFailed=`${title}. ${text}`; $("loader").hidden=false; $("main").hidden=true; $("loaderTitle").textContent=title; $("loaderText").textContent=text; $("loaderPick").hidden=false; }
 function readFile(file){ if (!file) return; const fr=new FileReader(); fr.onload=()=>load(fr.result,{name:file.name, modified:file.lastModified?new Date(file.lastModified):null}); fr.readAsArrayBuffer(file); }
 $("pickBtn").addEventListener("click",()=>$("pick").click());
 $("pick").addEventListener("change",e=>{ readFile(e.target.files[0]); e.target.value=""; });

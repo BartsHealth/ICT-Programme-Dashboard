@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
-<meta name="version" content="1.9">
+<meta name="version" content="1.10">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -149,6 +149,21 @@ h2{font-size:24px;line-height:1.25;margin-bottom:14px}
 .rules li{display:flex;gap:12px;align-items:flex-start}
 .rules li .rag{flex:none;min-width:116px}
 .rules p{margin:12px 0 0;color:var(--fg2);font-size:15px;max-width:90ch}
+.export{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px 22px}
+.export h2{font-size:20px;margin-bottom:10px}
+.export p{margin:0;color:var(--fg2);font-size:15px;max-width:90ch}
+.x-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:16px}
+.x-note{font-size:14px;color:var(--muted)}
+button.btn{border:0;cursor:pointer;font:inherit;font-weight:700}
+button.btn:disabled{opacity:.6;cursor:not-allowed}
+.snap-bar{position:fixed;top:0;left:0;right:0;z-index:40;background:var(--nhs-dark-blue);display:flex;gap:4px;padding:6px max(12px,env(safe-area-inset-left)) 6px max(12px,env(safe-area-inset-left));overflow-x:auto}
+.snap-bar a{color:var(--white);text-decoration:none;font-weight:700;font-size:15px;padding:8px 14px;border-radius:4px;white-space:nowrap;min-height:40px;display:inline-flex;align-items:center}
+.snap-bar a:hover{text-decoration:underline}
+.snap-bar a[aria-current="page"]{background:var(--white);color:var(--nhs-dark-blue)}
+.snap-bar a:focus-visible{outline:3px solid var(--rag-a);outline-offset:1px}
+.snap-pane{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg)}
+.snap-pane iframe{border:0;width:100%;height:100%;display:block}
+html.in-pane,html.in-pane body{overflow:hidden}
 .foot{font-size:14px;color:var(--muted);display:grid;gap:6px}
 .foot p{margin:0;max-width:95ch}
 
@@ -166,7 +181,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .metrics{grid-template-columns:1fr 1fr;gap:12px 14px}
   .metrics dd{font-size:17px}
   .tile .v{font-size:24px}
-  .rules{padding:16px 14px}
+  .rules,.export{padding:16px 14px}
+  .x-row .btn{width:100%;justify-content:center}
   .rules li{flex-direction:column;gap:6px}
   .prog-foot .btn{width:100%;justify-content:center}
 }
@@ -174,7 +190,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media print{
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff;font-size:12pt}
-  .btn,.tip{display:none!important}
+  .btn,.tip,.export,.snap-bar{display:none!important}
   .prog,.tile,.rules{break-inside:avoid}
   .wrap{padding-top:16px;gap:20px}
 }
@@ -195,7 +211,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.9 · 6 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.10 · 10 Nov 2026</span></p>
   </div>
 </div>
 
@@ -228,13 +244,19 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <p id="rulesNote"></p>
   </section>
 
+  <section class="export" id="export" aria-labelledby="h-export">
+    <h2 id="h-export">Export</h2>
+    <p>Save this overview and both programme dashboards as one web page file, with all the figures built in: every building and area, the charts, the Install Logs, and an Excel summary for each programme. The file doesn't need the spreadsheets, the internet or any other file, so it opens in a browser wherever it's kept: downloaded from SharePoint or Teams, synced with OneDrive, or attached to an email. It doesn't update itself, so download a new one after the planners are updated.</p>
+    <div class="x-row"><button class="btn" type="button" id="snapAllBtn" disabled>Download web page (all programmes)</button><span class="x-note" id="snapAllNote" aria-live="polite"></span></div>
+  </section>
+
   <div class="foot" id="foot"></div>
 </main>
 
-<script>
+<script id="app">
 (() => {
 "use strict";
-const PAGE_VERSION = "1.9 · 6 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.10 · 10 Nov 2026"; // keep in step with the version text in the header
 
 // The rating next to the summary: a photo, a score on a 1 to 5 thumbs-up scale, and an optional name and role.
 // Change score to move the setting; set photo to null to hide the photo, or show:false to hide the whole panel.
@@ -254,10 +276,10 @@ const RAG_RULES = { greenMaxDays: 5, amberMaxDays: 15, staleLogDays: 5 };
 const PROGRAMMES = [
   { title: "Wi-Fi access point refresh", stage: "delivery", lead: null,
     description: "Replacing wireless access points across all six sites, building by building.",
-    link: "wifi.html", linkText: "Open the Wi-Fi dashboard", spreadsheet: "Barts_WiFi_Refresh_Planner.xlsx", engine: "wifi" },
+    short: "Wi-Fi", link: "wifi.html", linkText: "Open the Wi-Fi dashboard", spreadsheet: "Barts_WiFi_Refresh_Planner.xlsx", engine: "wifi" },
   { title: "Printer replacement", stage: "delivery", lead: null,
     description: "Replacing all 1,469 printers on the supplier's list, site by site and floor by floor, in the same site order as the Wi-Fi refresh.",
-    link: "printers.html", linkText: "Open the printer dashboard", spreadsheet: "Barts_Printer_Replacement_Planner.xlsx", engine: "printers" }
+    short: "Printers", link: "printers.html", linkText: "Open the printer dashboard", spreadsheet: "Barts_Printer_Replacement_Planner.xlsx", engine: "printers" }
 ];
 
 const STAGE_TEXT = { delivery: "In delivery", planning: "In planning", closed: "Closed" };
@@ -281,7 +303,8 @@ const maxIso = list => list.length ? list.reduce((a,b)=>a>b?a:b) : null;
 const minIso = list => list.length ? list.reduce((a,b)=>a<b?a:b) : null;
 const range = (a,b) => !a||!b ? "–" : (a.getFullYear()===b.getFullYear() ? fShort.format(a) : fLong.format(a)) + " – " + fLong.format(b);
 const plural = (n,w) => `${n} ${w}${n===1?"":"s"}`;
-const TODAY = (() => { const t=new Date(); t.setHours(0,0,0,0); return t; })();
+const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with every programme built in
+const TODAY = (() => { const t=SNAP?new Date(SNAP.savedAt):new Date(); t.setHours(0,0,0,0); return t; })(); // a saved copy keeps the day it was made
 
 function cellDate(v){
   if (v==null || v==="") return null;
@@ -368,8 +391,8 @@ function readPlanWorkbook(wb, spec){
   return { rows, settings, phases, baselineName, nwd, issues, log };
 }
 
-function planStatus(wb, spec){
-  const model = readPlanWorkbook(wb, spec), s = model.settings;
+function planStatus(model, spec){
+  const s = model.settings;
   const isWork = d => { const w=d.getDay(); return w>0 && w<6 && !model.nwd.has(iso(d)); };
   const nextWork = d => { let x=new Date(d); while(!isWork(x)) x=addDays(x,1); return x; };
   const workDays = (a,b) => { let n=0; for (let x=new Date(a); x<=b; x=addDays(x,1)) if (isWork(x)) n++; return n; };
@@ -487,20 +510,22 @@ function planStatus(wb, spec){
     firstInstall: pStart
   };
 }
-const ENGINES = { wifi: wb=>planStatus(wb, SPECS.wifi), printers: wb=>planStatus(wb, SPECS.printers) };
 
 /* ================= page ================= */
 async function loadStatus(p){
   if (p.stage!=="delivery" || !p.engine || !p.spreadsheet) return { p, st:null };
+  if (SNAP){ const m=SNAP.models && SNAP.models[p.engine]; if (!m) return { p, st:null, error:"This programme's figures weren't saved in this copy." };
+    const model={...m, phases:new Map(m.phases), nwd:new Map(m.nwd)}; const st=planStatus(model, SPECS[p.engine]); st.updated=m.updated?new Date(m.updated):null; return { p, st, model }; }
   try{
     if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
     const res=await fetch(p.spreadsheet,{cache:"no-store"}); if (!res.ok) throw new Error(`${p.spreadsheet} couldn't be loaded (${res.status}).`);
     const wb=XLSX.read(await res.arrayBuffer(),{type:"array"});
-    const st=ENGINES[p.engine](wb); const lm=res.headers.get("Last-Modified"); st.updated = lm ? new Date(lm) : null;
-    return { p, st };
+    const model=readPlanWorkbook(wb, SPECS[p.engine]), st=planStatus(model, SPECS[p.engine]); const lm=res.headers.get("Last-Modified"); st.updated = lm ? new Date(lm) : null;
+    return { p, st, model };
   } catch(e){ return { p, st:null, error: location.protocol==="file:" ? "Open this page from the website to see the figures; a page opened straight from your computer can't read the spreadsheet." : (e.message||String(e)) }; }
 }
 
+const linkFor = p => SNAP ? (p.engine && SNAP.dashboards && SNAP.dashboards[p.engine] ? "#"+p.engine : null) : p.link;
 function ragBadge(r, big, text){
   return el("span",{class:"rag"+(big?" big":""),"data-r":r||"N"}, el("i",{"aria-hidden":"true",text:r||"–"}), text || (r ? RAG_TEXT[r] : "Not rated"));
 }
@@ -592,12 +617,12 @@ function renderProgramme({p, st, error}, i){
 
   if (p.stage!=="delivery"){
     if (p.next) card.append(el("p",{class:"reason",text:p.next}));
-    card.append(el("div",{class:"prog-foot"}, p.link ? el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"}) : el("span",{class:"soon",text:"Dashboard coming soon"})));
+    card.append(el("div",{class:"prog-foot"}, linkFor(p) ? el("a",{class:"btn",href:linkFor(p),text:(p.linkText||"Open the dashboard")+" →"}) : el("span",{class:"soon",text:"Dashboard coming soon"})));
     return card;
   }
   if (!st){
     card.append(el("p",{class:"reason",text:`The figures aren't available right now. ${error||""}`.trim()}));
-    if (p.link) card.append(el("div",{class:"prog-foot"}, el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"})));
+    if (linkFor(p)) card.append(el("div",{class:"prog-foot"}, el("a",{class:"btn",href:linkFor(p),text:(p.linkText||"Open the dashboard")+" →"})));
     return card;
   }
   card.append(el("p",{class:"reason",text:st.reason}));
@@ -627,7 +652,7 @@ function renderProgramme({p, st, error}, i){
   card.append(el("dl",{class:"metrics"}, ...items.map(([k,v,s,later])=>el("div",{}, el("dt",{text:k}), el("dd",{class:later?"later":null}, v, s?el("small",{text:s}):null)))));
   const strip=renderStrip(st, card); if (strip) card.append(strip);
   const fresh=[st.lastLog?`Figures as of ${fLong.format(st.asOf)}, the last day in the Install Log`:`No ${st.spec.doneNoun} in the Install Log yet`, st.updated?`spreadsheet updated ${fStamp.format(st.updated)}`:null].filter(Boolean).join(" · ")+".";
-  card.append(el("div",{class:"prog-foot"}, p.link?el("a",{class:"btn",href:p.link,text:(p.linkText||"Open the dashboard")+" →"}):null, el("span",{class:"fresh",text:fresh})));
+  card.append(el("div",{class:"prog-foot"}, linkFor(p)?el("a",{class:"btn",href:linkFor(p),text:(p.linkText||"Open the dashboard")+" →"}):null, el("span",{class:"fresh",text:fresh})));
   return card;
 }
 
@@ -640,7 +665,7 @@ function renderRating(){
   if (R.photo){ img.alt = R.name ? `Photo of ${R.name}` : "Photo"; let fellBack=false;
     img.addEventListener("load",()=>{ img.hidden=false; });
     img.addEventListener("error",()=>{ if (!fellBack && PHOTO_BUILT_IN){ fellBack=true; img.src=PHOTO_BUILT_IN; } else img.hidden=true; }); // file missing: use the built-in copy
-    img.src=R.photo; }
+    img.src = SNAP ? (SNAP.photo || PHOTO_BUILT_IN) : R.photo; }
   const host=$("ratingThumbs"); host.replaceChildren(); host.setAttribute("aria-label", `${sc} out of ${n} thumbs up`);
   const NS="http://www.w3.org/2000/svg";
   for (let i=1;i<=n;i++){
@@ -663,21 +688,117 @@ function renderRules(){
 }
 function renderFoot(){
   const f=$("foot"); f.replaceChildren();
+  if (SNAP){ const saved=new Date(SNAP.savedAt);
+    f.append(el("p",{text:`A saved copy, made on ${fStamp.format(saved)}. Its figures come from each programme's planner spreadsheet as it was then, and don't change. Working days are Monday to Friday, leaving out bank holidays and the Christmas break.`}));
+    f.append(el("p",{text:`Page version ${SNAP.page||PAGE_VERSION}.`})); return; }
   f.append(el("p",{text:"Each programme's figures come from its spreadsheet in this folder, read when the page opens, so they are as current as the last upload. Working days are Monday to Friday, leaving out bank holidays and the Christmas break."}));
   f.append(el("p",{text:`Page version ${PAGE_VERSION}.`}));
 }
 
 // Logo: use the first file that loads; otherwise show the Trust name as text
 (function(){
-  const img=$("logo"), txt=$("logoText"); let i=0;
+  const img=$("logo"), txt=$("logoText"); let i=0; const files = SNAP ? (SNAP.logo?[SNAP.logo]:[]) : LOGO_FILES;
   img.addEventListener("load",()=>{ img.hidden=false; txt.hidden=true; });
-  img.addEventListener("error",()=>{ if (i<LOGO_FILES.length) img.src=LOGO_FILES[i++]; else { img.hidden=true; txt.hidden=false; } });
-  if (LOGO_FILES.length) img.src=LOGO_FILES[i++]; else txt.hidden=false;
+  img.addEventListener("error",()=>{ if (i<files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; } });
+  if (files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; }
 })();
 
+/* ================= Export: this page and every dashboard in one web page file ================= */
+let RESULTS=null;
+const blobToDataUrl = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
+const imgData = async img => { if (!img || img.hidden || !img.naturalWidth) return null; const src=img.currentSrc||img.src; if (src.startsWith("data:")) return null;
+  try { return await blobToDataUrl(await (await fetch(src)).blob()); } catch(e){ console.error(e); return null; } };
+function saveBlob(blob, name){
+  const a=el("a",{href:URL.createObjectURL(blob), download:name}); document.body.append(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+// open a dashboard out of sight, wait for it to read its spreadsheet, then ask it for its saved copy
+function dashboardCopy(p){
+  return new Promise((resolve,reject)=>{
+    const fr=el("iframe",{src:p.link, "aria-hidden":"true", tabindex:"-1", title:"", style:"position:fixed;left:-10000px;top:0;width:1280px;height:900px;border:0;visibility:hidden"});
+    document.body.append(fr); const t0=Date.now(), name=p.short||p.title;
+    const done=(f,v)=>{ fr.remove(); f(v); };
+    const tick=async()=>{
+      let d=null; try { d=fr.contentWindow && fr.contentWindow.dashboard; } catch(e){ return done(reject, new Error(`the ${name} dashboard couldn't be read from here`)); }
+      if (d && d.ready()){ try { done(resolve, (await d.snapshot()).html); } catch(e){ done(reject, e); } return; }
+      if (d && d.failed()) return done(reject, new Error(`the ${name} dashboard couldn't read its spreadsheet (${d.failed()})`));
+      if (Date.now()-t0>60000) return done(reject, new Error(`the ${name} dashboard took too long to load`));
+      setTimeout(tick, 250); };
+    tick();
+  });
+}
+async function exportAll(){
+  const btn=$("snapAllBtn"), note=$("snapAllNote"); if (!RESULTS) return;
+  btn.disabled=true;
+  try {
+    const now=new Date(), stamp=iso(now), name=`Barts_ICT_Programmes_${stamp}.html`;
+    const dashboards={}, models={};
+    for (const r of RESULTS){
+      if (!r.st || !r.model) continue;
+      models[r.p.engine]={...r.model, phases:[...r.model.phases], nwd:[...r.model.nwd], updated:r.st.updated?r.st.updated.toISOString():null};
+      if (r.p.link){ note.textContent=`Reading the ${r.p.short||r.p.title} dashboard…`; dashboards[r.p.engine]=await dashboardCopy(r.p); }
+    }
+    note.textContent="Making the file…";
+    const logo=await imgData($("logo")), photo=await imgData($("ratingPhoto"));
+    const data={ v:1, savedAt:now.toISOString(), page:PAGE_VERSION, models, dashboards, logo, photo };
+    const root=document.documentElement.cloneNode(true);
+    // nothing is fetched from the internet: no spreadsheet reader, no web fonts (Arial is used instead)
+    root.querySelectorAll('script[src],link[rel="preconnect"],link[href*="fonts.googleapis"],a[download],iframe').forEach(n=>n.remove());
+    const li=root.querySelector("#logo"), lt=root.querySelector("#logoText");
+    if (logo){ li.setAttribute("src",logo); li.hidden=false; lt.hidden=true; } else { li.removeAttribute("src"); li.hidden=true; lt.hidden=false; }
+    const rp=root.querySelector("#ratingPhoto"); if (rp && rp.getAttribute("src")) rp.setAttribute("src", photo||PHOTO_BUILT_IN);
+    root.querySelector("#snapAllNote").textContent="";
+    root.querySelectorAll(".tip").forEach(t=>t.hidden=true);
+    const tag=document.createElement("script"); tag.textContent="window.SNAPSHOT="+JSON.stringify(data).replace(/</g,"\\u003c")+";";
+    root.querySelector("#app").before(tag);
+    const html="<!DOCTYPE html>\n"+root.outerHTML;
+    saveBlob(new Blob([html],{type:"text/html;charset=utf-8"}), name);
+    const kb=html.length/1024;
+    note.textContent=`Downloaded ${name} (${kb>=1024?(kb/1024).toFixed(1)+" MB":Math.round(kb)+" KB"}).`;
+  } catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}.`; }
+  finally { btn.disabled=false; }
+}
+$("snapAllBtn").addEventListener("click", exportAll);
+function exportReady(results){
+  RESULTS=results; const btn=$("snapAllBtn"), note=$("snapAllNote");
+  if (location.protocol==="file:"){ note.textContent="Open this page from the website to export it."; return; }
+  if (!results.some(r=>r.st)){ note.textContent="There are no programme figures to export right now."; return; }
+  btn.disabled=false;
+}
+
+/* ================= A saved copy: tabs for the overview and each dashboard ================= */
+function setupSnapshot(){
+  document.documentElement.classList.add("snapshot");
+  const saved=new Date(SNAP.savedAt), at=saved.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  document.querySelector(".hero .sub").textContent=`A saved copy of the overview and each programme's dashboard, made on ${fLong.format(saved)} at ${at}. The figures in it don't change; a new copy is needed after the planners are updated.`;
+  $("ver").textContent=`Saved copy · page version ${SNAP.page||PAGE_VERSION}`;
+  $("export").hidden=true;
+  const svc=document.querySelector(".service"); if (svc) svc.setAttribute("href","#");
+  const progs=PROGRAMMES.filter(p=>p.engine && SNAP.dashboards && SNAP.dashboards[p.engine]);
+  if (!progs.length) return;
+  const title0=document.title;
+  const bar=el("nav",{class:"snap-bar","aria-label":"Pages in this file"}, el("a",{href:"#",text:"Overview"}), ...progs.map(p=>el("a",{href:"#"+p.engine,text:p.short||p.title})));
+  document.body.prepend(bar);
+  const panes={};
+  const fit=()=>{ const h=bar.offsetHeight; document.body.style.paddingTop=h+"px"; for (const x of Object.values(panes)) x.style.top=h+"px"; };
+  const show=()=>{
+    const k=decodeURIComponent(location.hash.slice(1)), p=progs.find(x=>x.engine===k);
+    for (const a of bar.querySelectorAll("a")) { if (a.getAttribute("href")===(p?"#"+k:"#")) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); }
+    for (const x of Object.values(panes)) x.hidden=true;
+    if (p){
+      if (!panes[k]){ const fr=el("iframe",{title:`${p.title} dashboard`}); fr.srcdoc=SNAP.dashboards[k]; panes[k]=el("div",{class:"snap-pane"}, fr); document.body.append(panes[k]); }
+      panes[k].hidden=false; document.documentElement.classList.add("in-pane"); document.title=`${p.title} · ${title0}`;
+    } else { document.documentElement.classList.remove("in-pane"); document.title=title0; }
+    fit();
+  };
+  addEventListener("hashchange", show); addEventListener("resize", fit); show();
+}
+
+if (SNAP) setupSnapshot();
 $("asAt").textContent = `Status at ${fDay.format(TODAY)}`;
 renderRules(); renderFoot(); renderRating();
 Promise.all(PROGRAMMES.map(loadStatus)).then(results=>{
+  if (!SNAP) exportReady(results);
   renderTiles(results);
   const host=$("progs"); host.replaceChildren();
   const order=[...results].sort((a,b)=>({delivery:0,planning:1,closed:2}[a.p.stage]??3)-({delivery:0,planning:1,closed:2}[b.p.stage]??3));
