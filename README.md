@@ -9,15 +9,17 @@ A front screen for the ICT Director showing where each ICT programme stands agai
 | `index.html` | The front screen: portfolio summary, status (RAG) for each programme, forecast against baseline, milestones |
 | `wifi.html` | The Wi-Fi access point refresh dashboard |
 | `printers.html` | The printer replacement dashboard |
+| `pcm.html` | The patient monitoring replacement dashboard (St Bartholomew's) |
 | `Barts_WiFi_Refresh_Planner.xlsx` | The Wi-Fi plan and install log |
 | `Barts_Printer_Replacement_Planner.xlsx` | The printer plan and install log |
+| `Barts_PCM_Replacement_Planner.xlsx` | The patient monitoring status, timeline, actions, risks and membership |
 | `status-photo.jpg` | The photo shown with the rating on the front screen |
 | `barts-health-logo.png` | **You add this:** the Trust logo, shown top right on every page (see below) |
 | `README.md` | This note |
 
 **Not for this folder:** `Barts_Printer_Replacement_Tracker.xlsx`, the device-by-device printer list, has serial numbers and room locations. Keep it on the Trust's SharePoint or Teams. The website only needs the planner.
 
-The site is at `https://bartshealth.github.io/AP_Deployment/`. The dashboards are at `…/wifi.html` and `…/printers.html`.
+The site is at `https://bartshealth.github.io/AP_Deployment/`. The dashboards are at `…/wifi.html`, `…/printers.html` and `…/pcm.html`.
 
 ## Adding the Trust logo
 
@@ -56,10 +58,10 @@ The file is named with the day you download it, for example `Barts_WiFi_Refresh_
 The front screen has an **Export** section near the bottom. **Download web page (all programmes)** saves one HTML file, for example `Barts_ICT_Programmes_2026-11-10.html`, with:
 
 - the overview as it is now, including the status of each programme and the rating
-- the full Wi-Fi and printer dashboards, on tabs at the top of the file (**Overview**, **Wi-Fi**, **Printers**). The **Open the … dashboard** buttons on the overview go to the same tabs, and the browser's Back button returns to the overview.
+- the full Wi-Fi, printer and patient monitoring dashboards, on tabs at the top of the file (**Overview**, **Wi-Fi**, **Printers**, **PCM**). The **Open the … dashboard** buttons on the overview go to the same tabs, and the browser's Back button returns to the overview.
 - each dashboard's Excel summary, from **Download Excel summary** on its tab
 
-To make the file, the front screen opens each dashboard out of sight and takes a saved copy of it, which takes a few seconds. Do this from the website, not from a copy saved on your computer. The file is about 0.7 MB and works offline, like the single-dashboard copies described below. Keep it on SharePoint or Teams, or send it by email.
+To make the file, the front screen opens each dashboard out of sight and takes a saved copy of it, which takes a few seconds. Do this from the website, not from a copy saved on your computer. The file is about 1 MB and works offline, like the single-dashboard copies described below. Keep it on SharePoint or Teams, or send it by email.
 
 ## A copy of a dashboard for SharePoint or Teams
 
@@ -83,6 +85,24 @@ The forecast is the same one each dashboard shows: what the **Install Log** tab 
 
 To change the thresholds, edit `RAG_RULES` near the top of the script in `index.html`.
 
+The patient monitoring replacement is rated differently: it's a project with a timeline rather than a count of devices, so its project team sets **Overall status** (On track, At risk or Off track) and a **Reason** on the **Status** tab of its planner, and the front screen shows them as written. Until they're filled in, it shows as **Not rated yet**.
+
+## The patient monitoring replacement
+
+`pcm.html` and `Barts_PCM_Replacement_Planner.xlsx` cover replacing the GE patient monitoring at St Bartholomew's Hospital with Philips. The planner was filled in from *PCM_Replacement_Project_Plan_July_2026.xlsx* on 16 Nov 2026, and includes everything in it: names, the leave dates and the budget note included. The site and its spreadsheets can be seen by anyone with the link (see **Good to know**).
+
+The planner's tabs:
+
+- **Status:** the overall status, the reason, when it was set and by whom. Yellow cells are for you to fill in. Below them, counts of actions and risks are worked out from the other tabs.
+- **Timeline:** one row per bar or milestone on the plan's chart, by month. **From** and **To** are months: an activity runs from the start of its From month to the end of its To month. Set **Status** to Complete as each one finishes. Tendering, the business case and the contract award are marked Complete already, as the purchase order has been raised. **Category** gives the colour, as in the plan's legend.
+- **Actions:** both action logs from the plan, the project working group's and the ICT and clinical systems workstream's. **Due** can be a date or words such as ASAP; only dated actions count as overdue. Completed or Closed counts as done. Workstream names follow the five workstreams (the logs spelt some several ways).
+- **Risks and Issues:** from the plan's Issue & Risks discussion, with a new **Status** column (Open or Closed).
+- **Workstreams**, **Membership** and **Governance:** as on the plan's Membership and Governance tabs.
+
+The dashboard shows the status and reason, the timeline with today marked, the milestones (a milestone whose month has passed without being marked Complete is shown in red), the actions with filters for open, overdue and completed, by workstream and by search, the risks and issues, and who's involved. Its **Export** section gives an Excel summary and a one-file copy of the page, like the other dashboards.
+
+To update it, edit the planner in Excel and upload it with the same name. Changes made to the original project plan don't reach the dashboard unless they're copied into the planner.
+
 ## Updating a plan
 
 Edit the planner spreadsheet in Excel (settings on the **Order of Works** tab; fixed dates, status and notes on the **Buildings** tab for Wi-Fi or the **Areas** tab for printers; actual work on the **Install Log** tab), save it with the same name, and upload it in place of the old copy.
@@ -102,11 +122,11 @@ Keep the Install Log up to date: the front screen shows "Figures as of" the last
 
 ## Adding a programme
 
-Each new programme gets its own page and its own spreadsheet. In `index.html`, find the `PROGRAMMES` list near the top of the script and add an entry. If its planner follows the same layout as these two, add a line to `SPECS` (tab name, column names and wording) and it will be rated like the others. You can fill in `lead` with a programme lead's name to show it on the card.
+Each new programme gets its own page and its own spreadsheet. In `index.html`, find the `PROGRAMMES` list near the top of the script and add an entry. If its planner follows the same layout as the Wi-Fi and printer planners, add a line to `SPECS` (tab name, column names and wording) and it will be rated like them. A project like the patient monitoring replacement can use `engine: "pcm"` with a planner laid out like `Barts_PCM_Replacement_Planner.xlsx`. You can fill in `lead` with a programme lead's name to show it on the card.
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.10**, the Wi-Fi dashboard **2.5** and the printer dashboard **1.7** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.11** and the patient monitoring dashboard **1.0** (16 Nov 2026); the Wi-Fi dashboard is **2.5** and the printer dashboard **1.7** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline scrolls sideways with the names kept in view; tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.

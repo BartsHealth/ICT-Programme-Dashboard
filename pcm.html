@@ -1,0 +1,854 @@
+<!doctype html>
+<!-- Barts Patient Monitoring Replacement page, version 1.0 (16 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+     Reads Barts_PCM_Replacement_Planner.xlsx from this folder. Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
+<meta name="version" content="1.0">
+<title>Patient Monitoring Replacement</title>
+<meta name="description" content="Status, timeline, actions, risks and governance for the patient monitoring replacement at St Bartholomew's Hospital, read from the planner spreadsheet.">
+<!-- SheetJS reads the .xlsx file in the browser -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+/* Colours are from the NHS identity guidelines (NHS Blue and white dominant); Arial is the NHS substitute for Frutiger.
+   The timeline categories keep the colours of the project plan's own legend. */
+:root{
+  color-scheme:light;
+  --nhs-blue:#005EB8; --nhs-dark-blue:#003087; --white:#FFFFFF;
+  --bg:#F0F4F5; --surface:#FFFFFF; --raised:#FFFFFF; --fg:#212B32; --fg2:#425563; --muted:#4C6272;
+  --line:#D8DDE0; --line-strong:#AEB7BD; --accent:#005EB8; --accent-fg:#FFFFFF;
+  --good:#007F3B; --good-text:#007F3B; --warn:#FFB81C; --warn-text:#7A4E00; --crit-text:#D5281B; --today:#D5281B;
+  --rag-g:#007F3B; --rag-a:#FFB81C; --rag-r:#D5281B; --rag-n:#768692;
+  --c-procurement:#7C6FCC; --c-infrastructure:#1A9E7A; --c-planning:#2476C4; --c-implementation:#C45025; --c-evaluation:#A06010; --c-milestone:#E07030; --c-other:#768692;
+  --f-display:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --f-body:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--f-body)}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 16px 64px;display:grid;gap:24px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,4.4vw,40px);line-height:1.12}
+h2{font-size:22px}
+h3{font-size:17px}
+.eyebrow{font-weight:700;font-size:16px;margin:0}
+.muted{color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #FFEB3B;outline-offset:0;box-shadow:0 0 0 6px #212B32}
+/* Trust header: white, logo top right, then an NHS Blue title band */
+.nhs-header{background:var(--white);border-bottom:1px solid var(--line)}
+.hdr{max-width:1240px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:80px}
+.service{font-size:19px;font-weight:700;color:var(--nhs-blue);text-decoration:none;line-height:1.25}
+.service:hover{color:var(--nhs-dark-blue)}
+.logo{display:block;height:56px;width:auto;max-width:min(340px,52vw);object-fit:contain}
+.logo-text{font-weight:700;font-size:17px;line-height:1.2;text-align:right;color:var(--fg)}
+header.top{background:var(--nhs-blue);color:var(--white)}
+.top-inner{max-width:1240px;margin:0 auto;padding:22px 16px 28px;display:grid;gap:10px}
+.sub{margin:0;max-width:75ch;font-size:17px}
+.source{font-size:14px}
+.back{font-size:15px;color:var(--white);font-weight:700;justify-self:start}
+.back:hover{color:var(--white);text-decoration-thickness:3px}
+.top-links{display:flex;flex-wrap:wrap;gap:6px 28px}
+.ver{display:inline-block;font-size:13px;line-height:1.3;color:var(--white);border:1px solid var(--white);border-radius:4px;padding:2px 7px;justify-self:start}
+@media (max-width:560px){ .logo{height:42px} .service{font-size:17px} .hdr{min-height:68px} }
+
+/* status badge, as on the front screen */
+.rag{--c:var(--rag-n);--ink:#FFFFFF;display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;line-height:1;padding:6px 13px 6px 6px;border-radius:999px;white-space:nowrap;background:var(--c);color:var(--ink)}
+.rag i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--c);display:inline-grid;place-items:center;font-size:12px}
+.rag[data-r="G"]{--c:var(--rag-g)} .rag[data-r="A"]{--c:var(--rag-a);--ink:#212B32} .rag[data-r="R"]{--c:var(--rag-r)}
+.rag.big{font-size:17px;padding:8px 16px 8px 8px} .rag.big i{width:26px;height:26px;font-size:14px}
+
+/* status panel */
+.status-panel{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--c,var(--rag-n));border-radius:4px;padding:18px 20px;display:grid;gap:14px}
+.status-panel[data-r="G"]{--c:var(--rag-g)} .status-panel[data-r="A"]{--c:var(--rag-a)} .status-panel[data-r="R"]{--c:var(--rag-r)}
+.status-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.status-when{font-size:14px;color:var(--muted)}
+.status-reason{margin:0;font-size:17px;max-width:90ch;white-space:pre-line}
+.status-reason.unset{color:var(--fg2);font-size:15px}
+.figures{display:flex;flex-wrap:wrap;gap:10px 36px;border-top:1px solid var(--line);padding-top:14px}
+.fig{display:grid;gap:2px;min-width:0}
+.fig .k{font-size:12.5px;color:var(--muted)}
+.fig b{font:600 22px/1.15 var(--f-display);font-variant-numeric:tabular-nums}
+.fig small{font-size:13px;color:var(--fg2)}
+.fig small.bad,.bad{color:var(--crit-text);font-weight:600}
+.banner{border:1px solid var(--line-strong);background:var(--raised);padding:10px 14px;border-radius:6px;color:var(--fg2);font-size:14px}
+
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px;display:grid;gap:16px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.panel-head p{margin:0;color:var(--muted);font-size:13.5px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 12.5px/1 var(--f-body);color:var(--fg2);white-space:nowrap}
+.chip::before{content:"";width:11px;height:11px;border-radius:2px;background:var(--c);flex:none}
+.chip.msk::before{width:10px;height:10px;border-radius:1px;transform:rotate(45deg);background:var(--c-milestone)}
+.chip.today::before{width:2px;height:13px;border-radius:0;background:var(--today)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* loader */
+.loader{display:grid;gap:12px;justify-items:start;border:1px dashed var(--line-strong);border-radius:4px;padding:28px 20px;background:var(--surface)}
+.loader b{font-family:var(--f-display);font-size:18px}
+.btn{border:1px solid var(--line-strong);background:var(--raised);border-radius:4px;padding:8px 16px;min-height:44px;cursor:pointer;font-weight:700}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);box-shadow:0 4px 0 var(--nhs-dark-blue)}
+.btn.primary:hover{background:var(--nhs-dark-blue)}
+.drop.over{outline:2px dashed var(--accent);outline-offset:4px}
+
+/* timeline */
+.tl-scroll{overflow-x:auto;position:relative}
+.tl{min-width:900px;position:relative;--label:300px;padding-bottom:26px}
+.tl-axis,.tl-row{display:grid;grid-template-columns:var(--label) 1fr}
+.tl-axis{height:44px;border-bottom:1px solid var(--line-strong)}
+.tl-track{position:relative;min-width:0}
+.tl-axis .yr{position:absolute;top:2px;font:700 12.5px/1 var(--f-body);color:var(--fg);white-space:nowrap;transform:translateX(4px)}
+.tl-axis .mo{position:absolute;top:24px;font:500 12px/1 var(--f-body);color:var(--muted);white-space:nowrap;transform:translateX(-50%)}
+.tl-grid{position:absolute;top:0;bottom:26px;right:0;left:var(--label);pointer-events:none}
+.tl-grid .gl{position:absolute;top:44px;bottom:0;width:1px;background:var(--line)}
+.tl-grid .gl.year{top:0;background:var(--line-strong)}
+.tl-grid .today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:3}
+.tl-grid .today span{position:absolute;bottom:-22px;left:4px;font:600 12px/1 var(--f-body);background:var(--surface);color:var(--today);padding:2px 3px;white-space:nowrap}
+.tl-grid .today.flip span{left:auto;right:4px}
+.tl-row{min-height:30px;align-items:stretch}
+.tl-row .lbl2{font-size:13.5px;padding-right:12px;display:flex;align-items:center;gap:8px;min-width:0;line-height:1.25}
+.tl-row .lbl2 .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-row.grp{min-height:40px}
+.tl-row.grp .tl-track{height:40px}
+.tl-row.grp .grpband{top:19px}
+.tl-row.grp .lbl2{font:700 14px/1.25 var(--f-display)}
+.tl-row .tl-track{height:30px}
+.bar{position:absolute;top:8px;height:14px;background:var(--c);border-radius:4px;min-width:6px;cursor:default}
+.bar.done{opacity:.45}
+.bar-text{position:absolute;top:6px;font-size:12.5px;line-height:18px;white-space:nowrap;color:var(--fg2);pointer-events:none;background:var(--surface);padding:0 3px;border-radius:3px;z-index:4}
+.ms{position:absolute;top:8px;width:14px;height:14px;margin-left:-7px;transform:rotate(45deg);background:var(--c-milestone);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--c-milestone);cursor:default}
+.ms.done{background:var(--good);box-shadow:0 0 0 1px var(--good)}
+.ms.late{background:var(--crit-text);box-shadow:0 0 0 1px var(--crit-text)}
+.grpband{position:absolute;top:13px;height:4px;border-radius:2px;background:var(--line-strong)}
+.tip{position:absolute;z-index:10;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:180px;max-width:300px}
+.tip b{display:block;font-size:13.5px}
+.st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:13.5px}
+.st i{font-style:normal;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid var(--line-strong);color:var(--muted);flex:none}
+.st[data-s="done"] i{border-color:var(--good);background:var(--good);color:#fff}
+.st[data-s="progress"] i{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}
+.st[data-s="late"] i{border-color:var(--crit-text);background:var(--crit-text);color:#fff}
+.st[data-s="hold"] i{border-color:var(--warn);background:var(--warn);color:#3a2700}
+.st[data-s="late"]{color:var(--crit-text);font-weight:600}
+
+/* tables that become cards on phones */
+.tbl-scroll{overflow-x:auto}
+table.list{width:100%;border-collapse:collapse;font-size:14px}
+.list th,.list td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.list thead th{font:700 13.5px/1.3 var(--f-body);color:var(--fg);border-bottom:2px solid var(--line-strong);white-space:nowrap}
+.list td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+.list td.no{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.list .act{font-weight:600;line-height:1.35}
+.list .ws{font-size:12.5px;color:var(--muted);display:block;margin-top:2px}
+.list td.late{color:var(--crit-text);font-weight:600}
+.upd{font-size:13px;color:var(--fg2);white-space:pre-line;margin:0}
+details.more summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:13px;margin-top:4px}
+details.more p{white-space:pre-line;font-size:13px;color:var(--fg2);margin:6px 0 0}
+
+/* actions */
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--accent);border-radius:4px;overflow:hidden;max-width:100%}
+.filters>*{min-width:0;max-width:100%}
+.seg button{border:0;background:var(--surface);color:var(--accent);padding:8px 12px;min-height:40px;font-size:14px;font-weight:700;cursor:pointer}
+.seg button+button{border-left:1px solid var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.filters label{font-size:14px;color:var(--fg2);display:inline-flex;align-items:center;gap:8px}
+.filters select,.filters input{background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:6px 8px;min-height:40px;max-width:100%}
+.filters input{min-width:200px}
+table.mini{border-collapse:collapse;font-size:13.5px;min-width:min(560px,100%)}
+.mini th,.mini td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
+.mini thead th{font-weight:700;border-bottom:2px solid var(--line-strong)}
+.mini td.n,.mini th.n{text-align:right;font-variant-numeric:tabular-nums}
+.mini td.bad{color:var(--crit-text);font-weight:700}
+.count-line{margin:0;font-size:14px;color:var(--fg2)}
+
+/* risks */
+.risks{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.risk{border:1px solid var(--line);border-left:5px solid var(--warn);border-radius:6px;background:var(--raised);padding:12px 14px;display:grid;gap:6px;align-content:start;font-size:14px}
+.risk.closed{border-left-color:var(--line-strong);opacity:.75}
+.risk h3{font-size:15.5px;display:flex;justify-content:space-between;gap:10px}
+.risk h3 span{font:600 12px/1.6 var(--f-body);color:var(--muted);white-space:nowrap}
+.risk p{margin:0;white-space:pre-line}
+.risk .k{font-size:12.5px;color:var(--muted);display:block}
+
+/* team and governance */
+.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px 28px;align-items:start}
+.team h3{margin-bottom:8px}
+.people{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.people li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.people .role{color:var(--muted);text-align:right}
+.people .note{grid-column:1/-1;font-size:12.5px;color:var(--warn-text)}
+.gov{display:grid;gap:6px;justify-items:center}
+.gov .lvl{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.gov .box{border:1px solid var(--line-strong);border-top:4px solid var(--nhs-blue);border-radius:4px;background:var(--raised);padding:8px 12px;min-width:150px;max-width:320px;text-align:center;font-size:13.5px}
+.gov .box b{display:block;font-size:14.5px}
+.gov .box small{display:block;color:var(--muted)}
+.gov .arrow{color:var(--muted);font-size:15px;line-height:1}
+
+/* export */
+.x-tabs{margin:8px 0 0;padding-left:20px;font-size:14.5px;max-width:95ch}
+.x-tabs li{margin:5px 0}
+.x-h{font-size:17px;margin:20px 0 0}
+#xlPart .x-h{margin-top:8px}
+.x-p{margin:8px 0 0;font-size:14.5px;max-width:95ch}
+#snapPart{border-top:1px solid var(--line);margin-top:22px}
+.x-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:16px}
+.x-row .btn:disabled{opacity:.6;cursor:progress}
+#export{scroll-margin-top:12px}
+.foot{font-size:13px;color:var(--muted);display:grid;gap:6px}
+.foot p{margin:0;max-width:95ch}
+.linkbtn{background:none;border:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+
+/* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.hdr,.top-inner,.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.tl-axis>:first-child,.tl-row>.lbl2{position:sticky;left:0;z-index:6;background:var(--surface)}
+.swipe{display:none}
+@media (max-width:640px){
+  .wrap{padding-top:20px;gap:18px}
+  section.panel{padding:16px 14px;gap:14px}
+  .status-panel{padding:14px}
+  .status-reason{font-size:16px}
+  .figures{gap:10px 22px}
+  .fig b{font-size:20px}
+  .panel-head p{font-size:14px}
+  .hint{font-size:13px}
+  .tl{--label:136px;min-width:760px}
+  .tl-row .lbl2{font-size:12.5px;padding-right:8px}
+  .tl-row .lbl2 .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .swipe{display:block}
+  .risks{grid-template-columns:minmax(0,1fr)}
+  .team{grid-template-columns:minmax(0,1fr)}
+  .filters input{min-width:0;width:100%}
+  .filters label{width:100%} .filters select{flex:1;min-width:0;width:100%}
+  .seg button{flex:1 1 auto;padding:8px 10px}
+  /* action and milestone tables become one card per row */
+  table.list{min-width:0}
+  .list thead{display:none}
+  .list,.list tbody,.list tr,.list td{display:block;width:100%}
+  .list tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px;padding:12px 2px 14px;border-bottom:1px solid var(--line)}
+  .list td{border:0;padding:0;font-size:14.5px;min-width:0}
+  .list td::before{content:attr(data-label);display:block;color:var(--muted);font-size:12.5px;line-height:1.3;margin-bottom:1px}
+  .list td.wide{grid-column:1/-1}
+  .list td.wide.first::before{content:none}
+  .list td:empty{display:none}
+  .list td.no{display:none}
+}
+@media print{ .btn,.filters,#export,.top-links,.tip{display:none!important} body{background:#fff} section.panel,.status-panel{break-inside:avoid} .tl-scroll{overflow:visible} }
+</style>
+</head>
+<body>
+<div class="nhs-header">
+  <div class="hdr">
+    <a class="service" href="index.html">ICT Programme Dashboard</a>
+    <span>
+      <img class="logo" id="logo" alt="Barts Health NHS Trust" hidden>
+      <span class="logo-text" id="logoText" hidden>Barts Health NHS Trust</span>
+    </span>
+  </div>
+</div>
+<header class="top">
+  <div class="top-inner">
+    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export ↓</a></div>
+    <p class="eyebrow">ICT programme · St Bartholomew's Hospital</p>
+    <h1>Patient monitoring replacement</h1>
+    <p class="sub">Replacing the GE patient monitoring with Philips across St Bartholomew's Hospital: status, timeline, actions, risks and who's involved. Everything here is read from the planner spreadsheet each time this page opens.</p>
+    <div class="source" id="source"></div>
+    <span class="ver" id="ver">Page version 1.0 · 16 Nov 2026</span>
+  </div>
+</header>
+<div class="wrap">
+
+  <div class="loader drop" id="loader">
+    <b id="loaderTitle">Loading the planner spreadsheet…</b>
+    <span id="loaderText" class="muted"></span>
+    <div id="loaderPick" hidden>
+      <input type="file" id="pick" accept=".xlsx" hidden>
+      <button class="btn primary" type="button" id="pickBtn">Choose the spreadsheet</button>
+      <span class="hint">or drag it onto this box</span>
+    </div>
+  </div>
+
+  <main id="main" hidden style="display:grid;gap:24px">
+    <div class="status-panel" id="statusPanel" aria-labelledby="h-status">
+      <h2 id="h-status" class="eyebrow" style="font-size:15px;color:var(--muted)">Status</h2>
+      <div class="status-head" id="statusHead"></div>
+      <p class="status-reason" id="statusReason"></p>
+      <div class="figures" id="figures" aria-live="polite"></div>
+    </div>
+
+    <section class="panel" aria-labelledby="h-tl">
+      <div class="panel-head">
+        <h2 id="h-tl">Timeline</h2>
+        <p>Month by month, from the planner's Timeline tab. Faded bars and green diamonds are marked Complete.</p>
+      </div>
+      <p class="hint swipe">Swipe the timeline sideways to see all of it. Tap a bar or diamond for its details.</p>
+      <div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div><div class="tip" id="tlTip" hidden></div></div>
+      <div class="legend" id="tlLegend"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-ms">
+      <div class="panel-head">
+        <h2 id="h-ms">Milestones</h2>
+        <p>Milestones are by month. Once a month has passed, a milestone not marked Complete is shown in red.</p>
+      </div>
+      <div class="tbl-scroll"><table class="list" id="msTable"></table></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-act">
+      <div class="panel-head">
+        <h2 id="h-act">Actions</h2>
+        <p>Both action logs: the project working group's and the ICT and clinical systems workstream's.</p>
+      </div>
+      <div class="tbl-scroll"><table class="mini" id="actByWs"></table></div>
+      <div class="filters">
+        <div class="seg" role="group" aria-label="Which actions" id="actSeg"></div>
+        <label>Workstream <select id="actWs"></select></label>
+        <label>Search <input type="search" id="actQ" placeholder="Action, person or update"></label>
+      </div>
+      <p class="count-line" id="actCount" aria-live="polite"></p>
+      <div class="tbl-scroll"><table class="list" id="actTable"></table></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-risk">
+      <div class="panel-head">
+        <h2 id="h-risk">Risks and issues</h2>
+        <p>From the planner's Risks and Issues tab.</p>
+      </div>
+      <div class="risks" id="risks"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-team">
+      <div class="panel-head">
+        <h2 id="h-team">Workstreams, membership and governance</h2>
+        <p>From the planner's Workstreams, Membership and Governance tabs.</p>
+      </div>
+      <div class="tbl-scroll"><table class="list" id="wsTable"></table></div>
+      <p class="hint" id="wsNotes"></p>
+      <div class="team" id="team"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-x" id="export">
+      <div class="panel-head">
+        <h2 id="h-x">Export</h2>
+        <p>Take this page's figures away as a spreadsheet, or as a copy of the page in one file.</p>
+      </div>
+      <div id="xlPart">
+        <h3 class="x-h">Excel summary</h3>
+        <ul class="x-tabs" id="exportTabs"></ul>
+        <div class="x-row"><button class="btn primary" type="button" id="exportBtn">Download Excel summary</button><span class="hint" id="exportNote" aria-live="polite"></span></div>
+      </div>
+      <div id="snapPart">
+        <h3 class="x-h">Web page for SharePoint or Teams</h3>
+        <p class="x-p">This whole page in a single file, with the figures built in. It doesn't need the spreadsheet, the internet or any other file, so it opens in a browser wherever it's kept: downloaded from SharePoint or Teams, synced with OneDrive, or attached to an email. It doesn't update itself, so download a new one when the planner changes.</p>
+        <div class="x-row"><button class="btn primary" type="button" id="snapBtn">Download web page</button><span class="hint" id="snapNote" aria-live="polite"></span></div>
+      </div>
+    </section>
+
+    <div class="foot" id="foot"></div>
+  </main>
+</div>
+
+<script id="app">
+"use strict";
+(() => {
+/* ================= settings ================= */
+const XLSX_FILE = "Barts_PCM_Replacement_Planner.xlsx";
+const PAGE_VERSION = "1.0 · 16 Nov 2026"; // keep in step with the version text in the header
+const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
+const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
+const CATEGORY_COLOURS = { procurement:"--c-procurement", infrastructure:"--c-infrastructure", planning:"--c-planning", implementation:"--c-implementation", evaluation:"--c-evaluation" };
+const RAG_TEXT = { G:"On track", A:"At risk", R:"Off track" };
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const el = (tag, attrs={}, ...kids) => { const e=document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (v==null||v===false) continue; if (k==="class") e.className=v; else if (k==="text") e.textContent=v; else e.setAttribute(k,v); } for (const k of kids) if (k!=null) e.append(k); return e; };
+const pad = n => String(n).padStart(2,"0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const monthEnd = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+const fLong = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const fShort = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short"});
+const fMonth = new Intl.DateTimeFormat("en-GB",{month:"short",year:"numeric"});
+const fMon = new Intl.DateTimeFormat("en-GB",{month:"short"});
+const fStamp = new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const nf = new Intl.NumberFormat("en-GB");
+const plural = (n,w) => `${n} ${w}${n===1?"":"s"}`;
+const todayDate = () => { const t=SNAP?new Date(SNAP.savedAt):new Date(); t.setHours(0,0,0,0); return t; }; // a saved copy keeps the day it was made
+const capFirst = t => t ? t[0].toUpperCase()+t.slice(1) : t;
+const monthRange = (a,b) => { if (!a) return "–"; const A=fMonth.format(a), B=b?fMonth.format(b):A; return A===B ? A : (a.getFullYear()===b.getFullYear() ? `${fMon.format(a)} – ${B}` : `${A} – ${B}`); };
+const DONE_RX = /^(complete|completed|closed|done)$/i;
+
+function cellDate(v){
+  if (v==null || v==="") return null;
+  if (typeof v==="number" && isFinite(v)) { const d=new Date(Math.round((v-25569)*86400000)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
+  if (v instanceof Date) return iso(v);
+  const s=String(v).trim(); let m;
+  if ((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  if ((m=s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})$/))) { const y=m[3].length===2?2000+(+m[3]):+m[3]; return `${y}-${pad(+m[2])}-${pad(+m[1])}`; }
+  return null;
+}
+const cellText = v => v==null ? "" : String(v).trim();
+
+/* ================= reading the planner ================= */
+// rows of a tab as objects keyed by the lower-case heading; the heading row is the first one holding `first`
+function table(wb, tab, first){
+  const ws=wb.Sheets[tab]; if (!ws) throw new Error(`The spreadsheet has no "${tab}" tab.`);
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1, raw:true, defval:null});
+  const h=rows.findIndex(r=>r.some(c=>cellText(c).toLowerCase()===first));
+  if (h<0) throw new Error(`The "${tab}" tab has no "${first}" column.`);
+  const heads=rows[h].map(c=>cellText(c).toLowerCase());
+  return rows.slice(h+1).map(r=>Object.fromEntries(heads.map((k,i)=>[k, r[i]]))).filter(o=>Object.values(o).some(v=>cellText(v)!==""));
+}
+function ragOf(s){ s=cellText(s).toLowerCase(); return /^(on track|green|g)$/.test(s) ? "G" : /^(at risk|amber|a)$/.test(s) ? "A" : /^(off track|red|r)$/.test(s) ? "R" : null; }
+function readWorkbook(wb, source){
+  // Status: label in column A, value in column B
+  const sws=wb.Sheets["Status"]; if (!sws) throw new Error('The spreadsheet has no "Status" tab.');
+  const srows=XLSX.utils.sheet_to_json(sws,{header:1, raw:true, defval:null});
+  const val=label=>{ const r=srows.find(r=>cellText(r[0]).toLowerCase()===label); return r ? r[1] : null; };
+  const status={ rag:ragOf(val("overall status")), label:cellText(val("overall status")), reason:cellText(val("reason")), setOn:cellDate(val("status set on")), setBy:cellText(val("set by")),
+    project:cellText(val("project")), site:cellText(val("site")), supplier:cellText(val("supplier")) };
+  const timeline=table(wb,"Timeline","activity").map((r,i)=>({ order:+r.order||i+1, stage:cellText(r.stage), activity:cellText(r.activity), what:cellText(r.what),
+    type:/milestone/i.test(cellText(r.type))?"Milestone":"Activity", category:cellText(r.category), from:cellDate(r.from), to:cellDate(r.to)||cellDate(r.from),
+    status:cellText(r.status), notes:cellText(r.notes) })).filter(r=>r.activity && r.from);
+  const actions=table(wb,"Actions","action").map(r=>({ log:cellText(r.log), no:cellText(r.no), workstream:cellText(r.workstream), action:cellText(r.action),
+    responsible:cellText(r.responsible), contributors:cellText(r.contributors), start:cellDate(r.start), due:typeof r.due==="number"||r.due instanceof Date?cellDate(r.due):cellDate(cellText(r.due)),
+    dueText:typeof r.due==="number"||r.due instanceof Date?"":cellText(r.due), status:cellText(r.status), comments:cellText(r.comments) })).filter(r=>r.action);
+  const risks=table(wb,"Risks and Issues","theme").map(r=>({ theme:cellText(r.theme), issue:cellText(r["issue or risk raised"]), owner:cellText(r.owner),
+    mitigation:cellText(r["mitigation or actions agreed"]), status:cellText(r.status)||"Open" })).filter(r=>r.issue||r.theme);
+  const workstreams=wb.Sheets["Workstreams"] ? table(wb,"Workstreams","workstream").map(r=>({ no:cellText(r.no), name:cellText(r.workstream), leads:cellText(r.leads), kickoff:cellText(r["kick-off session"]) })).filter(r=>r.name) : [];
+  const wsNotes=wb.Sheets["Workstreams"] ? XLSX.utils.sheet_to_json(wb.Sheets["Workstreams"],{header:1,defval:null}).slice(1,4).map(r=>cellText(r[0])).filter(Boolean) : [];
+  const members=wb.Sheets["Membership"] ? table(wb,"Membership","group").map(r=>({ group:cellText(r.group), meets:cellText(r.meets), name:cellText(r.name), role:cellText(r.role), notes:cellText(r.notes) })).filter(r=>r.name) : [];
+  const governance=wb.Sheets["Governance"] ? table(wb,"Governance","body").map(r=>({ level:+r.level||0, body:cellText(r.body), meets:cellText(r["updates or meets"]), notes:cellText(r.notes) })).filter(r=>r.body) : [];
+  return { status, timeline, actions, risks, workstreams, wsNotes, members, governance, source };
+}
+
+/* ================= working things out ================= */
+function work(m){
+  const today=todayDate();
+  const isDone = s => DONE_RX.test(s||"");
+  const items=m.timeline.map(t=>{ const a=parse(t.from), b=monthEnd(parse(t.to)||a); return {...t, a, b, done:isDone(t.status)}; });
+  const milestones=items.filter(t=>t.type==="Milestone").sort((x,y)=>x.a-y.a||x.order-y.order);
+  for (const ms of milestones) ms.late = !ms.done && ms.b<today;
+  const nextMs=milestones.find(x=>!x.done && x.b>=today) || null;
+  const goLive=milestones.find(x=>/go.?live/i.test(x.activity+" "+x.what)) || null;
+  const acts=m.actions.map(a=>({...a, done:isDone(a.status), dueD:parse(a.due)}));
+  for (const a of acts) a.overdue = !a.done && a.dueD && a.dueD<today;
+  const open=acts.filter(a=>!a.done), overdue=acts.filter(a=>a.overdue), done=acts.filter(a=>a.done);
+  const risksOpen=m.risks.filter(r=>!/^closed$/i.test(r.status));
+  const now=items.filter(t=>t.type==="Activity" && !t.done && t.a<=today && t.b>=today);
+  const actsDone=items.filter(t=>t.type==="Activity" && t.done).length, actsAll=items.filter(t=>t.type==="Activity").length;
+  return { today, items, milestones, nextMs, goLive, acts, open, overdue, done, risksOpen, now, actsDone, actsAll };
+}
+
+/* ================= state ================= */
+let model=null, W=null, actView="open", loadFailed=null;
+
+/* ================= rendering ================= */
+function ragBadge(r, big){ return el("span",{class:"rag"+(big?" big":""),"data-r":r||"N"}, el("i",{"aria-hidden":"true",text:r||"–"}), r ? RAG_TEXT[r] : "Not rated"); }
+function stChip(kind, text, mark){ return el("span",{class:"st","data-s":kind}, el("i",{"aria-hidden":"true",text:mark||""}), text); }
+function itemState(t){
+  if (t.done) return ["done","Complete","✓︎"];
+  if (t.late) return ["late",`${t.status||"Not marked complete"}, month passed`,"!"];
+  if (/progress/i.test(t.status)) return ["progress","In progress","▶︎"];
+  if (/delay|hold/i.test(t.status)) return ["hold",t.status,"!"];
+  return ["", t.status || (t.b<W.today ? "Not marked complete" : "Planned"), ""];
+}
+
+function renderStatus(){
+  const s=model.status, p=$("statusPanel"); p.dataset.r=s.rag||"N";
+  const when=[s.setOn?`Set on ${fLong.format(parse(s.setOn))}`:null, s.setBy?`by ${s.setBy}`:null].filter(Boolean).join(" ");
+  $("statusHead").replaceChildren(...[ragBadge(s.rag,true), when?el("span",{class:"status-when",text:when}):null].filter(Boolean));
+  const r=$("statusReason");
+  if (s.rag || s.reason){ r.textContent=s.reason || "No reason given."; r.className="status-reason"; }
+  else { r.textContent="The project team hasn't set a status yet. Fill in Overall status and Reason on the planner's Status tab and the front screen and this page will show them."; r.className="status-reason unset"; }
+  const f=$("figures"); f.replaceChildren();
+  const fig=(k,v,s,bad)=>f.append(el("div",{class:"fig"}, el("span",{class:"k",text:k}), el("b",{text:v}), s?el("small",{class:bad?"bad":null,text:s}):null));
+  const g=W.goLive;
+  if (g) fig("Planned go-live", fMonth.format(g.a), g.done?"Complete":g.late?"Month passed, not marked complete":null, g.late);
+  fig("Next milestone", W.nextMs?fMonth.format(W.nextMs.a):"–", W.nextMs?`${W.nextMs.activity}`:"none still to come");
+  fig("Actions open", nf.format(W.open.length), W.overdue.length?`${W.overdue.length} overdue`:`of ${W.acts.length}`, W.overdue.length>0);
+  fig("Risks and issues open", nf.format(W.risksOpen.length), null);
+  fig("Activities complete", `${W.actsDone} of ${W.actsAll}`, W.now.length?`Planned now: ${[...new Set(W.now.map(t=>t.stage))].join(", ")}`:null);
+}
+
+function renderTimeline(){
+  const items=W.items; if (!items.length){ $("tl").replaceChildren(el("p",{class:"hint",text:"No rows on the Timeline tab."})); return; }
+  let min=new Date(Math.min(...items.map(t=>t.a))), max=new Date(Math.max(...items.map(t=>t.b)));
+  if (W.today<min) min=W.today; if (W.today>max) max=W.today;
+  min=new Date(min.getFullYear(), min.getMonth(), 1); max=monthEnd(max);
+  const end=addDays(max,1), span=end-min, x=d=>(d-min)/span*100;
+  const tl=$("tl"); tl.replaceChildren();
+  // axis: years and months
+  const axTrack=el("div",{class:"tl-track"}), grid=el("div",{class:"tl-grid","aria-hidden":"true"});
+  for (let m=new Date(min); m<end; m=new Date(m.getFullYear(), m.getMonth()+1, 1)){
+    const mid=x(new Date(m.getFullYear(), m.getMonth(), 15));
+    axTrack.append(el("span",{class:"mo",style:`left:${mid}%`,text:fMon.format(m).slice(0,3)}));
+    if (m.getMonth()===0 || +m===+min){ axTrack.append(el("span",{class:"yr",style:`left:${x(m)}%`,text:String(m.getFullYear())})); }
+    grid.append(el("div",{class:"gl"+(m.getMonth()===0?" year":""),style:`left:${x(m)}%`}));
+  }
+  tl.append(el("div",{class:"tl-axis"}, el("div",{}), axTrack));
+  // stages in date order, rows inside each stage in date order
+  const stages=new Map(); for (const t of items){ if (!stages.has(t.stage)) stages.set(t.stage,[]); stages.get(t.stage).push(t); }
+  const groups=[...stages.entries()].map(([name,list])=>({name, list:list.sort((p,q)=>p.a-q.a||p.b-q.b||p.order-q.order), a:new Date(Math.min(...list.map(t=>t.a))), b:new Date(Math.max(...list.map(t=>t.b)))}))
+    .sort((p,q)=>p.a-q.a||p.b-q.b);
+  for (const g of groups){
+    const done=g.list.every(t=>t.done);
+    tl.append(el("div",{class:"tl-row grp"}, el("div",{class:"lbl2"}, el("span",{class:"t",text:g.name}), done?stChip("done","", "✓︎"):null),
+      el("div",{class:"tl-track"}, el("div",{class:"grpband",style:`left:${x(g.a)}%;width:${x(addDays(g.b,1))-x(g.a)}%`}))));
+    for (const t of g.list){
+      const track=el("div",{class:"tl-track"});
+      const c=`var(${CATEGORY_COLOURS[t.category.toLowerCase()]||"--c-other"})`;
+      const [kind, stText]=itemState(t);
+      const tip={t:t.activity, l:[t.what, `${t.type==="Milestone"?"Milestone":"Activity"} · ${monthRange(t.a,t.type==="Milestone"?null:t.b)}`, `${t.category||"No category"} · ${stText}`, t.notes].filter(Boolean)};
+      const aria=`${t.activity}: ${t.what}, ${monthRange(t.a,t.type==="Milestone"?null:t.b)}, ${stText}`;
+      if (t.type==="Milestone"){
+        const mx=x(new Date(t.a.getFullYear(), t.a.getMonth(), 15));
+        const d=el("div",{class:"ms"+(t.done?" done":t.late?" late":""),style:`left:${mx}%`,tabindex:"0",role:"img","aria-label":aria}); d.dataset.tip=JSON.stringify(tip);
+        track.append(d, el("span",{class:"bar-text",style:mx>78?`right:${100-mx+1.2}%`:`left:calc(${mx}% + 13px)`,text:t.what}));
+      } else {
+        const l=x(t.a), w=x(addDays(t.b,1))-l;
+        const b=el("div",{class:"bar"+(t.done?" done":""),style:`--c:${c};left:${l}%;width:${w}%`,tabindex:"0",role:"img","aria-label":aria}); b.dataset.tip=JSON.stringify(tip);
+        track.append(b, el("span",{class:"bar-text",style:l+w>78?`right:${100-l+0.6}%`:`left:calc(${l+w}% + 6px)`,text:t.what}));
+      }
+      tl.append(el("div",{class:"tl-row"}, el("div",{class:"lbl2"}, el("span",{class:"t",text:t.activity,title:t.activity}), kind?stChip(kind,"",kind==="done"?"✓︎":kind==="progress"?"▶︎":"!"):null), track));
+    }
+  }
+  let tx=null;
+  if (W.today>=min && W.today<=max){ tx=x(W.today); grid.append(el("div",{class:"today"+(tx>88?" flip":""),style:`left:${tx}%`}, el("span",{text:`Today ${fShort.format(W.today)}`}))); }
+  tl.append(grid);
+  // on a narrow screen, open the timeline scrolled so today is in view
+  if (tx!=null) requestAnimationFrame(()=>{ const sc=$("tlScroll"); if (sc.scrollWidth<=sc.clientWidth+4) return;
+    const lw=tl.querySelector(".tl-row .lbl2")?.offsetWidth||0, pos=lw+(tl.scrollWidth-lw)*tx/100; sc.scrollLeft=Math.max(0, pos-lw-(sc.clientWidth-lw)*0.6); });
+  const lg=$("tlLegend"); lg.replaceChildren();
+  const cats=[...new Set(items.filter(t=>t.type==="Activity").map(t=>t.category))];
+  for (const cat of cats) lg.append(el("span",{class:"chip",style:`--c:var(${CATEGORY_COLOURS[(cat||"").toLowerCase()]||"--c-other"})`,text:cat||"Other"}));
+  lg.append(el("span",{class:"chip msk",text:"Milestone"}), el("span",{class:"chip today",text:"Today"}));
+}
+
+function renderMilestones(){
+  const t=$("msTable"); t.replaceChildren();
+  t.append(el("thead",{}, el("tr",{}, ...["Month","Milestone","Stage","Status","Notes"].map(h=>el("th",{text:h})))));
+  const tb=el("tbody");
+  for (const m of W.milestones){
+    const [kind, text, mark]=itemState(m);
+    tb.append(el("tr",{}, el("td",{class:"d","data-label":"Month",text:fMonth.format(m.a)}), el("td",{class:"wide first","data-label":"Milestone"}, el("span",{class:"act",text:m.activity}), el("span",{class:"ws",text:m.what})),
+      el("td",{"data-label":"Stage",text:m.stage}), el("td",{"data-label":"Status"}, stChip(kind,text,mark)), el("td",{class:"wide","data-label":"Notes",text:m.notes})));
+  }
+  t.append(tb);
+}
+
+function lastUpdate(text){
+  const lines=text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  if (lines.length<=1) return { latest:text, more:null };
+  return { latest:lines[lines.length-1], more:text };
+}
+function renderActions(){
+  // by workstream
+  const ws=[...new Set(W.acts.map(a=>a.workstream||"No workstream"))].sort((a,b)=>a.localeCompare(b));
+  const t=$("actByWs"); t.replaceChildren(el("caption",{class:"hint",style:"text-align:left;caption-side:top;padding-bottom:6px",text:"By workstream"}),
+    el("thead",{}, el("tr",{}, el("th",{text:"Workstream"}), el("th",{class:"n",text:"Open"}), el("th",{class:"n",text:"Overdue"}), el("th",{class:"n",text:"Completed"}))));
+  const tb=el("tbody");
+  for (const w of ws){ const l=W.acts.filter(a=>(a.workstream||"No workstream")===w); const o=l.filter(a=>!a.done).length, od=l.filter(a=>a.overdue).length;
+    tb.append(el("tr",{}, el("td",{text:w}), el("td",{class:"n",text:String(o)}), el("td",{class:"n"+(od?" bad":""),text:String(od)}), el("td",{class:"n",text:String(l.length-o)}))); }
+  tb.append(el("tr",{}, el("th",{text:"All"}), el("th",{class:"n",text:String(W.open.length)}), el("th",{class:"n",text:String(W.overdue.length)}), el("th",{class:"n",text:String(W.done.length)})));
+  t.append(tb);
+  // filters
+  const seg=$("actSeg"); seg.replaceChildren();
+  for (const [k,label,n] of [["open","Open",W.open.length],["overdue","Overdue",W.overdue.length],["done","Completed",W.done.length],["all","All",W.acts.length]]){
+    const b=el("button",{type:"button","aria-pressed":String(actView===k),text:`${label} (${n})`}); b.addEventListener("click",()=>{ actView=k; renderActions(); }); seg.append(b); }
+  const sel=$("actWs"), keep=sel.value; sel.replaceChildren(el("option",{value:"",text:"All workstreams"}), ...ws.map(w=>el("option",{value:w,text:w}))); sel.value=ws.includes(keep)?keep:"";
+  renderActionList();
+}
+function renderActionList(){
+  const wsSel=$("actWs").value, q=$("actQ").value.trim().toLowerCase();
+  let list=W.acts.filter(a=>actView==="all"||(actView==="open"&&!a.done)||(actView==="overdue"&&a.overdue)||(actView==="done"&&a.done));
+  if (wsSel) list=list.filter(a=>(a.workstream||"No workstream")===wsSel);
+  if (q) list=list.filter(a=>[a.action,a.responsible,a.contributors,a.comments,a.workstream,a.no].join(" ").toLowerCase().includes(q));
+  const far=new Date(9e15);
+  list.sort((a,b)=>(b.overdue-a.overdue) || (a.done-b.done) || ((a.dueD||far)-(b.dueD||far)) || (+a.no||999)-(+b.no||999));
+  $("actCount").textContent = `Showing ${plural(list.length,"action")}${wsSel?` for ${wsSel}`:""}${q?` matching "${$("actQ").value.trim()}"`:""}.`;
+  const t=$("actTable"); t.replaceChildren();
+  t.append(el("thead",{}, el("tr",{}, ...["No","Action","Responsible","Contributors","Due","Status","Latest update"].map(h=>el("th",{text:h})))));
+  const tb=el("tbody");
+  for (const a of list){
+    const u=lastUpdate(a.comments||"");
+    const upd=el("td",{class:"wide","data-label":"Latest update"}, a.comments?el("p",{class:"upd",text:u.latest}):null,
+      u.more?el("details",{class:"more"}, el("summary",{text:"All updates"}), el("p",{text:u.more})):null);
+    const due=a.due?fLong.format(a.dueD):a.dueText;
+    const [kind,text,mark]=a.done?["done",a.status,"✓︎"]:a.overdue?["late",`${a.status||"Open"}, overdue`,"!"]:["",a.status||"Open",""];
+    tb.append(el("tr",{}, el("td",{class:"no","data-label":"No",text:a.no}),
+      el("td",{class:"wide first","data-label":"Action"}, el("span",{class:"act",text:a.action}), el("span",{class:"ws",text:[a.workstream, a.log==="ICT & clinical systems"?"ICT & clinical systems log":null, a.start?`started ${fLong.format(parse(a.start))}`:null].filter(Boolean).join(" · ")})),
+      el("td",{"data-label":"Responsible",text:a.responsible}), el("td",{"data-label":"Contributors",text:a.contributors}),
+      el("td",{class:"d"+(a.overdue?" late":""),"data-label":"Due",text:due||"–"}), el("td",{"data-label":"Status"}, stChip(kind,text,mark)), upd));
+  }
+  t.append(tb);
+}
+
+function renderRisks(){
+  const host=$("risks"); host.replaceChildren();
+  const list=[...model.risks].sort((a,b)=>(/closed/i.test(a.status))-(/closed/i.test(b.status)));
+  for (const r of list) host.append(el("article",{class:"risk"+(/closed/i.test(r.status)?" closed":"")},
+    el("h3",{}, r.theme||"Risk or issue", el("span",{text:r.status})), el("p",{text:r.issue}),
+    r.owner?el("p",{}, el("span",{class:"k",text:"Owner"}), r.owner):null,
+    el("p",{}, el("span",{class:"k",text:"Mitigation or actions agreed"}), r.mitigation||"None recorded yet")));
+}
+
+function renderTeam(){
+  const t=$("wsTable"); t.replaceChildren();
+  if (model.workstreams.length){
+    t.append(el("thead",{}, el("tr",{}, ...["No","Workstream","Leads","Kick-off session"].map(h=>el("th",{text:h})))));
+    const tb=el("tbody"); for (const w of model.workstreams) tb.append(el("tr",{}, el("td",{class:"no","data-label":"No",text:w.no}), el("td",{class:"wide first","data-label":"Workstream"}, el("span",{class:"act",text:w.name})),
+      el("td",{"data-label":"Leads",text:w.leads}), el("td",{"data-label":"Kick-off session",text:w.kickoff})));
+    t.append(tb);
+  }
+  $("wsNotes").textContent=model.wsNotes.join(" ");
+  const team=$("team"); team.replaceChildren();
+  const groups=[...new Set(model.members.map(m=>m.group))];
+  for (const g of groups){
+    const l=model.members.filter(m=>m.group===g), meets=l.find(m=>m.meets)?.meets;
+    team.append(el("div",{}, el("h3",{text:g+(meets?` · ${meets.toLowerCase()}`:"")}),
+      el("ul",{class:"people"}, ...l.map(m=>el("li",{}, el("span",{text:m.name}), el("span",{class:"role",text:m.role}), m.notes?el("span",{class:"note",text:m.notes}):null)))));
+  }
+  if (model.governance.length){
+    const gov=el("div",{class:"gov","aria-label":"Governance, top first"});
+    const levels=[...new Set(model.governance.map(g=>g.level))].sort((a,b)=>a-b);
+    levels.forEach((lv,i)=>{ if (i) gov.append(el("span",{class:"arrow","aria-hidden":"true",text:"▲︎ reports to"}));
+      gov.append(el("div",{class:"lvl"}, ...model.governance.filter(g=>g.level===lv).map(g=>el("div",{class:"box"}, el("b",{text:g.body}), g.meets?el("small",{text:g.meets}):null, g.notes?el("small",{text:g.notes}):null)))); });
+    team.append(el("div",{}, el("h3",{text:"Governance"}), gov));
+  }
+}
+
+function renderFoot(){
+  const f=$("foot"); f.replaceChildren();
+  if (SNAP){ f.append(el("p",{text:`A saved copy of the dashboard, made from ${model.source.name} on ${fStamp.format(new Date(SNAP.savedAt))}. It doesn't read the spreadsheet, so its figures stay as they were then.`}), el("p",{text:`Page version ${SNAP.page||PAGE_VERSION}.`})); return; }
+  f.append(el("p",{text:`Status, timeline, actions, risks and membership come from ${XLSX_FILE} in this folder each time the page opens. To change them, edit the spreadsheet and upload it again with the same name.`}));
+  const p=el("p",{}, `Page version ${PAGE_VERSION}. `); const b=el("button",{class:"linkbtn",type:"button",text:"Open a different copy of the spreadsheet"}); b.addEventListener("click",()=>$("pick").click()); p.append(b); f.append(p);
+}
+
+function renderAll(){
+  W=work(model);
+  const src=model.source; $("source").textContent = `From ${src.name}${src.modified ? ", updated "+fStamp.format(src.modified) : ""}.`;
+  renderStatus(); renderTimeline(); renderMilestones(); renderActions(); renderRisks(); renderTeam(); renderExport(); renderFoot();
+}
+
+/* ================= tooltips for the timeline ================= */
+(function(){
+  const box=$("tlScroll"), tip=$("tlTip");
+  const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.map(s=>el("div",{text:s}))); tip.hidden=false;
+    const r=box.getBoundingClientRect(); tip.style.left=Math.max(0,Math.min(cx-r.left+box.scrollLeft+12, box.scrollLeft+r.width-tip.offsetWidth-4))+"px"; tip.style.top=(cy-r.top+16)+"px"; };
+  box.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else if (e.pointerType!=="touch") tip.hidden=true; });
+  box.addEventListener("pointerleave",e=>{ if (e.pointerType!=="touch") tip.hidden=true; });
+  box.addEventListener("click",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
+  box.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+Math.min(r.width/2,40),r.bottom-6); } });
+  box.addEventListener("focusout",()=>tip.hidden=true);
+  document.addEventListener("pointerdown",e=>{ if (e.pointerType==="touch" && !e.target.closest("#tlScroll")) tip.hidden=true; });
+})();
+$("actWs").addEventListener("change", renderActionList);
+$("actQ").addEventListener("input", renderActionList);
+
+/* ================= Export: an Excel summary of this page ================= */
+const EXCELJS_URL = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"; // formats the file; if it can't load, the file is still made, without colours
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const FMT = { int:"#,##0", date:"d mmm yyyy", month:"mmm yyyy", stamp:"d mmm yyyy hh:mm" };
+const XC = { blue:"005EB8", pale:"E8EDEE", good:"007F3B", bad:"D5281B", muted:"4C6272", white:"FFFFFF", amber:"FFB81C" };
+const xlDate = d => d ? (Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5 : null; // Excel day number, so dates never shift with time zones
+const xlStamp = d => (Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes())-Date.UTC(1899,11,30))/864e5;
+const colL = i => { let t="", n=i+1; while (n){ const m=(n-1)%26; t=String.fromCharCode(65+m)+t; n=Math.floor((n-1)/26); } return t; };
+const EXPORT_FILE="Barts_PCM_Replacement_Summary", SNAP_FILE="Barts_PCM_Replacement_Dashboard";
+function exportTabs(){
+  return [["Summary","The status and reason, planned go-live, next milestone, and counts of actions and risks"],
+    ["Timeline","Every activity and milestone with its months and status"],
+    ["Actions","Both action logs, with which actions are overdue"],
+    ["Risks and Issues","Each risk or issue with its owner and mitigation"],
+    ["Team","Workstreams, membership and governance"]];
+}
+function renderExport(){ $("exportTabs").replaceChildren(...exportTabs().map(([n,d])=>el("li",{}, el("b",{text:n}), ": "+d))); }
+function tableSheet(name, cols, rows){
+  const head=cols.map(c=>({v:c.h, b:true, c:XC.white, bg:XC.blue, wrap:true}));
+  const cell=(c,v)=>{ if (v && typeof v==="object" && !(v instanceof Date)) return v;
+    if (v instanceof Date) return {v:xlDate(v), fmt:c.fmt==="month"?FMT.month:FMT.date};
+    const o={v:v===undefined||v===""?null:v}; if (c.wrap) o.wrap=true; return o; };
+  const grid=[head, ...rows.map(r=>cols.map((c,i)=>cell(c,r[i])))];
+  return { name, grid, widths:cols.map(c=>c.w||14), freeze:1, filter:rows.length?`A1:${colL(cols.length-1)}${rows.length+1}`:null, landscape:true, headH:32 };
+}
+function buildExport(){
+  const s=model.status, now=new Date(), sheets=[], g=[];
+  const kv=(label,val,note)=>g.push([{v:label}, {...val, al:"left"}, {v:note||null, c:XC.muted, wrap:true}]);
+  const sec=t=>g.push([{v:t,b:true,c:XC.white,bg:XC.blue},{v:null,bg:XC.blue},{v:null,bg:XC.blue}]);
+  const ragColour={G:XC.good, A:XC.amber, R:XC.bad};
+  g.push([{v:"Patient monitoring replacement: summary", b:true, sz:16, c:XC.blue}]);
+  g.push([{v:"Barts Health NHS Trust · ICT programme dashboard · St Bartholomew's Hospital", c:XC.muted}]); g.push([]);
+  kv("Exported", {v:xlStamp(now), fmt:FMT.stamp});
+  kv("Spreadsheet", {v:model.source.name}, model.source.modified?`updated ${fStamp.format(model.source.modified)}`:null);
+  kv("Dashboard page version", {v:PAGE_VERSION}); g.push([]);
+  sec("Status");
+  kv("Overall status", {v:s.rag?RAG_TEXT[s.rag]:"Not rated", b:true, c:s.rag?(s.rag==="A"?"7A4E00":ragColour[s.rag]):XC.muted});
+  kv("Reason", {v:s.reason||null, wrap:true});
+  kv("Status set on", s.setOn?{v:xlDate(parse(s.setOn)), fmt:FMT.date}:{v:null}, s.setBy?`by ${s.setBy}`:null); g.push([]);
+  sec("Key dates and figures");
+  if (W.goLive) kv("Planned go-live", {v:xlDate(W.goLive.a), fmt:FMT.month}, W.goLive.done?"Complete":W.goLive.late?"Month passed, not marked complete":null);
+  kv("Next milestone", W.nextMs?{v:xlDate(W.nextMs.a), fmt:FMT.month}:{v:"None still to come"}, W.nextMs?W.nextMs.activity:null);
+  kv("Actions open", {v:W.open.length, fmt:FMT.int}, `of ${W.acts.length}`);
+  kv("Actions overdue", {v:W.overdue.length, fmt:FMT.int, b:true, c:W.overdue.length?XC.bad:null}, "Open, with a due date before today");
+  kv("Actions completed", {v:W.done.length, fmt:FMT.int});
+  kv("Risks and issues open", {v:W.risksOpen.length, fmt:FMT.int});
+  kv("Activities complete", {v:`${W.actsDone} of ${W.actsAll}`}); g.push([]);
+  sec("Tabs in this file"); for (const [n,d] of exportTabs()) kv(n,{v:null},d);
+  sheets.push({ name:"Summary", grid:g, widths:[30,26,90], landscape:false });
+
+  const tlRows=[...W.items].sort((a,b)=>a.a-b.a||a.b-b.b||a.order-b.order).map(t=>[t.stage, t.activity, t.what, t.type, t.category, t.a, t.type==="Milestone"?t.a:new Date(t.b.getFullYear(),t.b.getMonth(),1), itemState(t)[1], t.notes]);
+  sheets.push(tableSheet("Timeline", [{h:"Stage",w:26},{h:"Activity",w:30},{h:"What",w:32},{h:"Type",w:11},{h:"Category",w:15},{h:"From",w:11,fmt:"month"},{h:"To",w:11,fmt:"month"},{h:"Status",w:26},{h:"Notes",w:60,wrap:true}], tlRows));
+  const aRows=W.acts.map(a=>[a.log, a.no, a.workstream, a.action, a.responsible, a.contributors, a.start?parse(a.start):null, a.dueD||a.dueText||null, a.status||"Open",
+    a.overdue?{v:"Yes", b:true, c:XC.bad}:null, a.comments]);
+  sheets.push(tableSheet("Actions", [{h:"Log",w:20},{h:"No",w:6},{h:"Workstream",w:24},{h:"Action",w:50,wrap:true},{h:"Responsible",w:22,wrap:true},{h:"Contributors",w:22,wrap:true},{h:"Start",w:12},{h:"Due",w:13},{h:"Status",w:14},{h:"Overdue",w:9},{h:"Comments",w:80,wrap:true}], aRows));
+  sheets.push(tableSheet("Risks and Issues", [{h:"Theme",w:24},{h:"Issue or risk raised",w:60,wrap:true},{h:"Owner",w:28,wrap:true},{h:"Mitigation or actions agreed",w:60,wrap:true},{h:"Status",w:10}],
+    model.risks.map(r=>[r.theme, r.issue, r.owner, r.mitigation, r.status])));
+  const team=[...model.workstreams.map(w=>["Workstream "+w.no, w.name, w.leads, w.kickoff?`Kick-off: ${w.kickoff}`:null]),
+    ...model.members.map(m=>[m.group+(m.meets?` (${m.meets.toLowerCase()})`:""), m.name, m.role, m.notes||null]),
+    ...model.governance.map(gv=>[`Governance level ${gv.level}`, gv.body, gv.meets||null, gv.notes||null])];
+  sheets.push(tableSheet("Team", [{h:"Group",w:32},{h:"Name or body",w:44,wrap:true},{h:"Role, leads or updates",w:40,wrap:true},{h:"Notes",w:50,wrap:true}], team));
+  return sheets;
+}
+async function writeFormatted(sheets){
+  const wb=new window.ExcelJS.Workbook(); wb.creator="Barts Health ICT programme dashboard"; wb.created=new Date();
+  for (const sh of sheets){
+    const ws=wb.addWorksheet(sh.name, { views: sh.freeze?[{state:"frozen", ySplit:sh.freeze}]:[], pageSetup:{paperSize:9, orientation:sh.landscape?"landscape":"portrait", fitToPage:true, fitToWidth:1, fitToHeight:0} });
+    ws.columns=sh.widths.map(w=>({width:w}));
+    sh.grid.forEach((row,ri)=>{ const xr=ws.getRow(ri+1);
+      row.forEach((c,ci)=>{ if (!c) return; const cell=xr.getCell(ci+1);
+        if (c.v!=null) cell.value=c.v; if (c.fmt) cell.numFmt=c.fmt;
+        const font={name:"Arial", size:c.sz||10}; if (c.b) font.bold=true; if (c.c) font.color={argb:"FF"+c.c}; cell.font=font;
+        if (c.bg) cell.fill={type:"pattern", pattern:"solid", fgColor:{argb:"FF"+c.bg}};
+        cell.alignment={vertical:"top", wrapText:!!c.wrap, ...(c.al?{horizontal:c.al}:{})}; });
+      if (ri===0 && sh.headH) xr.height=sh.headH; });
+    if (sh.filter) ws.autoFilter=sh.filter;
+  }
+  return new Blob([await wb.xlsx.writeBuffer()], {type:XLSX_MIME});
+}
+function writePlain(sheets){ // SheetJS, which the page already uses: the same figures, no colours
+  const wb=XLSX.utils.book_new();
+  for (const sh of sheets){ const ws={}; let maxC=sh.widths.length-1;
+    sh.grid.forEach((row,ri)=>row.forEach((c,ci)=>{ if (!c || c.v==null) return; maxC=Math.max(maxC,ci);
+      const cell = typeof c.v==="number" ? {t:"n", v:c.v} : {t:"s", v:String(c.v)}; if (c.fmt) cell.z=c.fmt; ws[XLSX.utils.encode_cell({r:ri,c:ci})]=cell; }));
+    ws["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:Math.max(0,sh.grid.length-1), c:maxC}});
+    ws["!cols"]=sh.widths.map(w=>({wch:w})); if (sh.filter) ws["!autofilter"]={ref:sh.filter};
+    XLSX.utils.book_append_sheet(wb, ws, sh.name); }
+  return new Blob([XLSX.write(wb,{bookType:"xlsx", type:"array", compression:true})], {type:XLSX_MIME});
+}
+let excelJsP=null;
+function loadExcelJS(){
+  if (window.ExcelJS) return Promise.resolve(true);
+  if (!excelJsP) excelJsP=new Promise(res=>{ const sc=document.createElement("script"); sc.src=EXCELJS_URL; const t=setTimeout(()=>res(!!window.ExcelJS), 20000);
+    sc.onload=()=>{ clearTimeout(t); res(!!window.ExcelJS); }; sc.onerror=()=>{ clearTimeout(t); excelJsP=null; res(false); }; document.head.append(sc); });
+  return excelJsP;
+}
+function saveBlob(blob, name){ const a=el("a",{href:URL.createObjectURL(blob), download:name}); document.body.append(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
+const blobToDataUrl = b => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
+const dataUrlToBlob = u => { const [h,b64]=u.split(","); const bin=atob(b64); const a=new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return new Blob([a],{type:(h.match(/^data:([^;,]+)/)||[])[1]||"application/octet-stream"}); };
+async function excelBlob(){
+  const sheets=buildExport(); let blob=null, plain=false;
+  if (await loadExcelJS()){ try { blob=await writeFormatted(sheets); } catch(e){ console.error(e); } }
+  if (!blob){ blob=writePlain(sheets); plain=true; }
+  return { blob, plain };
+}
+async function exportExcel(){
+  const btn=$("exportBtn"), note=$("exportNote"); if (!model) return;
+  if (SNAP && SNAP.xlsx){ saveBlob(dataUrlToBlob(SNAP.xlsx), SNAP.xlsxName); note.textContent=`Downloaded ${SNAP.xlsxName}, made with this copy on ${fLong.format(new Date(SNAP.savedAt))}.`; return; }
+  btn.disabled=true; note.textContent="Making the file…";
+  try { const name=`${EXPORT_FILE}_${iso(new Date())}.xlsx`, {blob, plain}=await excelBlob(); saveBlob(blob, name);
+    note.textContent=`Downloaded ${name}${plain?". It has no colours or bold text because the formatting library couldn't load on this network; the figures are the same":""}.`; }
+  catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}`; }
+  finally { btn.disabled=false; }
+}
+$("exportBtn").addEventListener("click", exportExcel);
+
+/* ================= Export: the whole page as one file, figures built in ================= */
+async function buildSnapshotHtml(){
+  const now=new Date(), stamp=iso(now), name=`${SNAP_FILE}_${stamp}.html`;
+  let xlsx=null; try { xlsx=await blobToDataUrl((await excelBlob()).blob); } catch(e){ console.error(e); }
+  let logo=null; const img=$("logo");
+  if (!img.hidden && img.naturalWidth){ try { logo=await blobToDataUrl(await (await fetch(img.currentSrc||img.src)).blob()); } catch(e){ console.error(e); } }
+  const data={ v:1, savedAt:now.toISOString(), page:PAGE_VERSION, actView, logo, xlsx, xlsxName:`${EXPORT_FILE}_${stamp}.xlsx`,
+    model:{...model, source:{...model.source, modified:model.source.modified?model.source.modified.toISOString():null}} };
+  const root=document.documentElement.cloneNode(true);
+  root.querySelectorAll('script[src],link[rel="preconnect"],link[href*="fonts.googleapis"],a[download]').forEach(n=>n.remove());
+  const li=root.querySelector("#logo"), lt=root.querySelector("#logoText");
+  if (logo){ li.setAttribute("src",logo); li.hidden=false; lt.hidden=true; } else { li.removeAttribute("src"); li.hidden=true; lt.hidden=false; }
+  for (const id of ["exportNote","snapNote"]) root.querySelector("#"+id).textContent="";
+  root.querySelectorAll(".tip").forEach(t=>t.hidden=true);
+  const tag=document.createElement("script"); tag.textContent="window.SNAPSHOT="+JSON.stringify(data).replace(/</g,"\\u003c")+";";
+  root.querySelector("#app").before(tag);
+  return { html:"<!DOCTYPE html>\n"+root.outerHTML, name };
+}
+async function makeSnapshot(){
+  const btn=$("snapBtn"), note=$("snapNote"); if (!model) return;
+  btn.disabled=true; note.textContent="Making the file…";
+  try { const {html,name}=await buildSnapshotHtml(); saveBlob(new Blob([html],{type:"text/html;charset=utf-8"}), name);
+    note.textContent=`Downloaded ${name} (${Math.max(1,Math.round(html.length/1024))} KB).`; }
+  catch(err){ console.error(err); note.textContent=`Couldn't make the file: ${err.message||err}`; }
+  finally { btn.disabled=false; }
+}
+$("snapBtn").addEventListener("click", makeSnapshot);
+// lets the front screen (index.html) put a saved copy of this page into its own one-file export
+window.dashboard = { ready:()=>!!model, failed:()=>loadFailed, snapshot:buildSnapshotHtml };
+// when this page is a saved copy: no links to the other pages, which aren't saved with it, and say it doesn't update
+function applySnapshotMode(){
+  document.body.classList.add("snapshot");
+  document.querySelectorAll('a[href="index.html"]').forEach(a=>{ if (a.classList.contains("back")) a.hidden=true; else a.removeAttribute("href"); });
+  const saved=new Date(SNAP.savedAt);
+  document.querySelector(".top .sub").textContent=`A saved copy of the dashboard, made on ${fLong.format(saved)} at ${saved.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}. The figures in it don't change; a new copy is needed when the planner is updated.`;
+  $("ver").textContent=`Saved copy · page version ${SNAP.page||PAGE_VERSION}`;
+  $("snapPart").hidden=true; if (!SNAP.xlsx) $("xlPart").hidden=true;
+}
+
+/* ================= logo ================= */
+(function(){
+  const img=$("logo"), txt=$("logoText"); let i=0; const files = SNAP ? (SNAP.logo?[SNAP.logo]:[]) : LOGO_FILES;
+  img.addEventListener("load",()=>{ img.hidden=false; txt.hidden=true; });
+  img.addEventListener("error",()=>{ if (i<files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; } });
+  if (files.length) img.src=files[i++]; else { img.hidden=true; txt.hidden=false; }
+})();
+
+/* ================= loading ================= */
+function showLoader(title, text){ loadFailed=`${title}. ${text}`; $("loader").hidden=false; $("loaderTitle").textContent=title; $("loaderText").textContent=text; $("loaderPick").hidden=false; }
+function useWorkbook(buf, source){
+  const wb=XLSX.read(buf,{type:"array"});
+  model=readWorkbook(wb, source); loadFailed=null;
+  $("loader").hidden=true; $("main").hidden=false; renderAll(); $("exportJump").hidden=false;
+}
+$("pickBtn").addEventListener("click",()=>$("pick").click());
+$("pick").addEventListener("change", async e=>{ const f=e.target.files[0]; if (!f) return;
+  try { useWorkbook(await f.arrayBuffer(), {name:f.name, modified:new Date(f.lastModified)}); } catch(err){ showLoader("That file couldn't be read", err.message||String(err)); } });
+const drop=$("loader");
+drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
+drop.addEventListener("drop", async e=>{ e.preventDefault(); drop.classList.remove("over"); const f=e.dataTransfer.files[0]; if (!f) return;
+  try { useWorkbook(await f.arrayBuffer(), {name:f.name, modified:new Date(f.lastModified)}); } catch(err){ showLoader("That file couldn't be read", err.message||String(err)); } });
+function bootSnapshot(){
+  const m=SNAP.model; if (m.source.modified) m.source.modified=new Date(m.source.modified);
+  applySnapshotMode(); model=m; actView=SNAP.actView||"open";
+  $("loader").hidden=true; $("main").hidden=false; renderAll(); $("exportJump").hidden=false;
+}
+if (SNAP) bootSnapshot(); else (async () => {
+  try {
+    if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
+    const res = await fetch(XLSX_FILE, {cache:"no-store"});
+    if (!res.ok) throw new Error(`${XLSX_FILE} wasn't found next to this page (${res.status}).`);
+    const lm=res.headers.get("Last-Modified");
+    useWorkbook(await res.arrayBuffer(), {name:XLSX_FILE, modified: lm?new Date(lm):null});
+  } catch(err){
+    if (location.protocol==="file:") showLoader("Choose the planner spreadsheet", "A page opened straight from your computer can't read the spreadsheet by itself. Choose Barts_PCM_Replacement_Planner.xlsx, or drag it here.");
+    else showLoader("The planner spreadsheet couldn't be loaded", err.message||String(err));
+  }
+})();
+})();
+</script>
+</body>
+</html>

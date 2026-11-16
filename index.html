@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap">
-<meta name="version" content="1.10">
+<meta name="version" content="1.11">
 <title>ICT Programme Overview</title>
 <meta name="description" content="Status of the Barts Health ICT infrastructure programmes for the ICT Director, read from each programme's planner spreadsheet.">
 <!-- SheetJS reads each programme's spreadsheet so the page can work out status and forecasts -->
@@ -25,6 +25,7 @@
   --line:#D8DDE0; --line-strong:#AEB7BD; --track:#E8EDEE;
   --accent:var(--nhs-blue); --accent-hover:var(--nhs-dark-blue);
   --rag-g:#007F3B; --rag-a:#FFB81C; --rag-r:#D5281B; --rag-n:#768692;
+  --c-procurement:#7C6FCC; --c-infrastructure:#1A9E7A; --c-planning:#2476C4; --c-implementation:#C45025; --c-evaluation:#A06010;
   --s-rlh:#005EB8; --s-meh:#ED8B00; --s-sbh:#00A499; --s-rs:#AE2573; --s-nuh:#41B6E6; --s-wch:#78BE20;
   --today:#D5281B;
   --f:Arimo,Arial,"Helvetica Neue",Helvetica,sans-serif;
@@ -164,6 +165,17 @@ button.btn:disabled{opacity:.6;cursor:not-allowed}
 .snap-pane{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg)}
 .snap-pane iframe{border:0;width:100%;height:100%;display:block}
 html.in-pane,html.in-pane body{overflow:hidden}
+.reason.unset{color:var(--fg2)}
+.pst{display:grid;gap:4px;position:relative}
+.pst-row{display:grid;grid-template-columns:minmax(110px,30%) 1fr;align-items:center;gap:10px}
+.pst-l{font-size:13px;color:var(--fg2);line-height:1.25}
+.pst-row .sch-track{height:16px}
+.pst .seg.done{opacity:.45}
+.pst-today{position:absolute;top:0;bottom:0;left:calc(max(110px, 30%) + 10px);right:0;pointer-events:none}
+.pst-today::before{content:"";position:absolute;top:-4px;bottom:0;left:calc(var(--tx) * 1%);width:2px;background:var(--today)}
+.pst-today span{position:absolute;bottom:-20px;left:calc(var(--tx) * 1%);transform:translateX(-50%);font-size:12px;font-weight:700;color:var(--today);white-space:nowrap}
+.pst-axis{display:grid;grid-template-columns:minmax(110px,30%) 1fr;gap:10px;margin-top:22px}
+.pst-axis .sch-axis{position:relative;height:16px}
 .foot{font-size:14px;color:var(--muted);display:grid;gap:6px}
 .foot p{margin:0;max-width:95ch}
 
@@ -211,7 +223,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <p class="eyebrow">Prepared for the ICT Director</p>
     <h1>ICT programme overview</h1>
     <p class="sub">Where each ICT infrastructure programme stands against its baseline, worked out from the programme's own planner spreadsheet each time this page opens.</p>
-    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.10 · 10 Nov 2026</span></p>
+    <p class="meta"><span id="asAt"></span><span class="ver" id="ver">Page version 1.11 · 16 Nov 2026</span></p>
   </div>
 </div>
 
@@ -256,7 +268,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script id="app">
 (() => {
 "use strict";
-const PAGE_VERSION = "1.10 · 10 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.11 · 16 Nov 2026"; // keep in step with the version text in the header
 
 // The rating next to the summary: a photo, a score on a 1 to 5 thumbs-up scale, and an optional name and role.
 // Change score to move the setting; set photo to null to hide the photo, or show:false to hide the whole panel.
@@ -272,14 +284,17 @@ const RAG_RULES = { greenMaxDays: 5, amberMaxDays: 15, staleLogDays: 5 };
 
 /* The programmes on this page. To add one, copy an entry and change it.
    stage: "delivery" (rated and shown with figures), "planning" (shown, not rated yet) or "closed".
-   engine: which spreadsheet reader to use ("wifi" or "printers", see SPECS below). lead: optional name to show. */
+   engine: which spreadsheet reader to use ("wifi" or "printers", see SPECS below, or "pcm", a project rated by its team on its planner's Status tab). lead: optional name to show. */
 const PROGRAMMES = [
   { title: "Wi-Fi access point refresh", stage: "delivery", lead: null,
     description: "Replacing wireless access points across all six sites, building by building.",
     short: "Wi-Fi", link: "wifi.html", linkText: "Open the Wi-Fi dashboard", spreadsheet: "Barts_WiFi_Refresh_Planner.xlsx", engine: "wifi" },
   { title: "Printer replacement", stage: "delivery", lead: null,
     description: "Replacing all 1,469 printers on the supplier's list, site by site and floor by floor, in the same site order as the Wi-Fi refresh.",
-    short: "Printers", link: "printers.html", linkText: "Open the printer dashboard", spreadsheet: "Barts_Printer_Replacement_Planner.xlsx", engine: "printers" }
+    short: "Printers", link: "printers.html", linkText: "Open the printer dashboard", spreadsheet: "Barts_Printer_Replacement_Planner.xlsx", engine: "printers" },
+  { title: "Patient monitoring replacement", stage: "delivery", lead: null,
+    description: "Replacing the GE patient monitoring at St Bartholomew's Hospital with Philips: theatres and ICU first, then the wards and telemetry, then the rest of the hospital.",
+    short: "PCM", link: "pcm.html", linkText: "Open the patient monitoring dashboard", spreadsheet: "Barts_PCM_Replacement_Planner.xlsx", engine: "pcm" }
 ];
 
 const STAGE_TEXT = { delivery: "In delivery", planning: "In planning", closed: "Closed" };
@@ -511,16 +526,108 @@ function planStatus(model, spec){
   };
 }
 
+/* ================= the patient monitoring replacement: a project rated by its team ================= */
+// Read from Barts_PCM_Replacement_Planner.xlsx, the same way as pcm.html (Status, Timeline, Actions and Risks and Issues tabs)
+const PCM_CATS = { procurement:"--c-procurement", infrastructure:"--c-infrastructure", planning:"--c-planning", implementation:"--c-implementation", evaluation:"--c-evaluation" };
+const monthEnd = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+const fMonthYear = new Intl.DateTimeFormat("en-GB",{month:"short",year:"numeric"});
+function pcmTable(wb, tab, first){
+  const ws=wb.Sheets[tab]; if (!ws) throw new Error(`The spreadsheet has no "${tab}" tab.`);
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1, raw:true, defval:null});
+  const h=rows.findIndex(r=>r.some(c=>cellText(c).toLowerCase()===first)); if (h<0) throw new Error(`The "${tab}" tab has no "${first}" column.`);
+  const heads=rows[h].map(c=>cellText(c).toLowerCase());
+  return rows.slice(h+1).map(r=>Object.fromEntries(heads.map((k,i)=>[k, r[i]]))).filter(o=>Object.values(o).some(v=>cellText(v)!==""));
+}
+function readPcmWorkbook(wb){
+  const srows=XLSX.utils.sheet_to_json(wb.Sheets["Status"]||{},{header:1, raw:true, defval:null});
+  const val=label=>{ const r=srows.find(r=>cellText(r[0]).toLowerCase()===label); return r ? r[1] : null; };
+  const lab=cellText(val("overall status")).toLowerCase();
+  const rag=/^(on track|green|g)$/.test(lab)?"G":/^(at risk|amber|a)$/.test(lab)?"A":/^(off track|red|r)$/.test(lab)?"R":null;
+  return {
+    status:{ rag, reason:cellText(val("reason")), setOn:cellDate(val("status set on")), setBy:cellText(val("set by")) },
+    timeline:pcmTable(wb,"Timeline","activity").map((r,i)=>({ order:+r.order||i+1, stage:cellText(r.stage), activity:cellText(r.activity), what:cellText(r.what),
+      type:/milestone/i.test(cellText(r.type))?"Milestone":"Activity", category:cellText(r.category), from:cellDate(r.from), to:cellDate(r.to)||cellDate(r.from), status:cellText(r.status) })).filter(t=>t.activity&&t.from),
+    actions:pcmTable(wb,"Actions","action").map(r=>({ status:cellText(r.status), due:(typeof r.due==="number"||r.due instanceof Date)?cellDate(r.due):null })).filter((r,i,a)=>true),
+    risks:pcmTable(wb,"Risks and Issues","theme").map(r=>({ status:cellText(r.status)||"Open" }))
+  };
+}
+function pcmStatus(m){
+  const done=s=>/^(complete|completed|closed|done)$/i.test(s||"");
+  const items=m.timeline.map(t=>{ const a=parse(t.from); return {...t, a, b:monthEnd(parse(t.to)||a), done:done(t.status)}; });
+  const ms=items.filter(t=>t.type==="Milestone").sort((x,y)=>x.a-y.a);
+  const nextM=ms.find(x=>!x.done && x.b>=TODAY) || null, goLive=ms.find(x=>/go.?live/i.test(x.activity+" "+x.what)) || null;
+  const acts=m.actions, open=acts.filter(a=>!done(a.status)), overdue=open.filter(a=>a.due && parse(a.due)<TODAY);
+  const stages=new Map(); for (const t of items){ const g=stages.get(t.stage)||{label:t.stage, a:t.a, b:t.b, cats:new Map(), done:true}; if (t.a<g.a) g.a=t.a; if (t.b>g.b) g.b=t.b;
+    if (t.type==="Activity") g.cats.set(t.category,(g.cats.get(t.category)||0)+1); if (!t.done) g.done=false; stages.set(t.stage,g); }
+  const now=items.filter(t=>t.type==="Activity" && !t.done && t.a<=TODAY && t.b>=TODAY);
+  return { kind:"project", rag:m.status.rag, reason:m.status.reason, setOn:m.status.setOn, setBy:m.status.setBy,
+    goLive: goLive ? { label:goLive.activity, a:goLive.a, done:goLive.done, late:!goLive.done && goLive.b<TODAY } : null,
+    nextMs: nextM ? { end:iso(monthEnd(nextM.a)), label:nextM.activity, text:`${nextM.activity} (planned ${fMonthYear.format(nextM.a)})` } : null,
+    actions:acts.length, open:open.length, overdue:overdue.length, risksOpen:m.risks.filter(r=>!/^closed$/i.test(r.status)).length,
+    stages:[...stages.values()].sort((x,y)=>x.a-y.a||x.b-y.b), now:[...new Set(now.map(t=>t.stage))], issuesOpen:0 };
+}
+function renderProjectStrip(st){
+  const g=st.stages; if (!g.length) return null;
+  let min=new Date(Math.min(...g.map(s=>s.a))), max=new Date(Math.max(...g.map(s=>s.b))); if (TODAY<min) min=TODAY; if (TODAY>max) max=TODAY;
+  min=new Date(min.getFullYear(),min.getMonth(),1); const end=addDays(monthEnd(max),1), span=end-min, x=d=>Math.max(0,Math.min(100,(d-min)/span*100));
+  const box=el("div",{class:"sch"}, el("h4",{text:"Timeline by stage"}));
+  const area=el("div",{class:"sch-area"}), axis=el("div",{class:"sch-axis","aria-hidden":"true"});
+  const rows=el("div",{class:"pst"}), used=[];
+  for (const s of g){
+    const cat=[...s.cats.entries()].sort((p,q)=>q[1]-p[1])[0]?.[0]||""; if (!used.includes(cat)) used.push(cat);
+    const l=x(s.a), w=x(addDays(s.b,1))-l;
+    const seg=el("div",{class:"seg"+(s.done?" done":""),tabindex:"0",role:"img",style:`--c:var(${PCM_CATS[cat.toLowerCase()]||"--rag-n"});left:${l}%;width:${w}%`,"aria-label":`${s.label}: ${fMonthYear.format(s.a)} to ${fMonthYear.format(s.b)}${s.done?", complete":""}`});
+    seg.dataset.tip=JSON.stringify({t:s.label, l:[`${fMonthYear.format(s.a)} – ${fMonthYear.format(s.b)}`, s.done?"Complete":"Not all marked complete"]});
+    rows.append(el("div",{class:"pst-row"}, el("span",{class:"pst-l",text:s.label}), el("div",{class:"sch-track"}, seg)));
+  }
+  if (TODAY>=min && TODAY<end){ const tx=x(TODAY); rows.append(el("div",{class:"pst-today",style:`--tx:${tx}`}, el("span",{text:"Today"}))); }
+  for (let m=new Date(min); m<end; m=new Date(m.getFullYear(),m.getMonth()+1,1)) if (m.getMonth()%3===0 && x(m)<94) axis.append(el("span",{style:`left:${x(m)}%`,text:fMonth.format(m)}));
+  area.append(rows, el("div",{class:"pst-axis"}, el("span"), axis));
+  const tip=el("div",{class:"tip",hidden:""}); area.append(tip);
+  const show=(t,cx,cy)=>{ let d; try{ d=JSON.parse(t.dataset.tip); }catch{ return; } tip.replaceChildren(el("b",{text:d.t}), ...d.l.map(s=>el("div",{text:s}))); tip.hidden=false;
+    const r=area.getBoundingClientRect(); tip.style.left=Math.max(0,Math.min(cx-r.left+12, r.width-tip.offsetWidth))+"px"; tip.style.top=(cy-r.top+16)+"px"; };
+  area.addEventListener("pointermove",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
+  area.addEventListener("pointerleave",e=>{ if (e.pointerType!=="touch") tip.hidden=true; });
+  area.addEventListener("click",e=>{ const t=e.target.closest("[data-tip]"); if (t) show(t,e.clientX,e.clientY); else tip.hidden=true; });
+  area.addEventListener("focusin",e=>{ const t=e.target.closest("[data-tip]"); if (t){ const r=t.getBoundingClientRect(); show(t,r.left+Math.min(r.width/2,40),r.bottom-6); } });
+  area.addEventListener("focusout",()=>tip.hidden=true);
+  box.append(area);
+  const lg=el("div",{class:"legend"});
+  for (const cat of used) lg.append(el("span",{class:"sw",style:`--c:var(${PCM_CATS[(cat||"").toLowerCase()]||"--rag-n"})`,text:cat||"Other"}));
+  lg.append(el("span",{class:"ln",style:"--c:var(--today)",text:"Today"}));
+  box.append(lg);
+  return box;
+}
+function renderProjectCard(card, p, st){
+  card.append(el("p",{class:"reason"+(st.rag||st.reason?"":" unset"),text: st.rag||st.reason ? (st.reason||"No reason given on the planner's Status tab.") : "The project team hasn't set a status yet. It's set on the Status tab of the planner spreadsheet."}));
+  const items=[
+    ["Status set", st.setOn?fLong.format(parse(st.setOn)):"–", st.setBy?`by ${st.setBy}`:(st.setOn?null:"on the planner's Status tab")],
+    ["Planned go-live", st.goLive?fMonthYear.format(st.goLive.a):"–", st.goLive?(st.goLive.done?"Complete":st.goLive.late?"Month passed, not marked complete":st.goLive.label):null, st.goLive&&st.goLive.late],
+    ["Next milestone", st.nextMs?fMonthYear.format(parse(st.nextMs.end)):"–", st.nextMs?st.nextMs.label:"none still to come"],
+    ["Actions open", String(st.open), st.overdue?`${st.overdue} overdue`:`of ${st.actions}`, st.overdue>0],
+    ["Risks and issues open", String(st.risksOpen), null],
+    ["Planned now", st.now.length?st.now.join(", "):"–", st.now.length?"stages with work planned this month":null]
+  ];
+  card.append(el("dl",{class:"metrics"}, ...items.map(([k,v,s,later])=>el("div",{}, el("dt",{text:k}), el("dd",{class:later?"later":null}, v, s?el("small",{text:s}):null)))));
+  const strip=renderProjectStrip(st); if (strip) card.append(strip);
+  const fresh=[st.setOn?`Status set ${fLong.format(parse(st.setOn))}`:"Status not set yet", st.updated?`spreadsheet updated ${fStamp.format(st.updated)}`:null].filter(Boolean).join(" · ")+".";
+  card.append(el("div",{class:"prog-foot"}, linkFor(p)?el("a",{class:"btn",href:linkFor(p),text:(p.linkText||"Open the dashboard")+" →"}):null, el("span",{class:"fresh",text:fresh})));
+  return card;
+}
+
 /* ================= page ================= */
 async function loadStatus(p){
   if (p.stage!=="delivery" || !p.engine || !p.spreadsheet) return { p, st:null };
   if (SNAP){ const m=SNAP.models && SNAP.models[p.engine]; if (!m) return { p, st:null, error:"This programme's figures weren't saved in this copy." };
+    if (p.engine==="pcm"){ const st=pcmStatus(m); st.updated=m.updated?new Date(m.updated):null; return { p, st, model:m }; }
     const model={...m, phases:new Map(m.phases), nwd:new Map(m.nwd)}; const st=planStatus(model, SPECS[p.engine]); st.updated=m.updated?new Date(m.updated):null; return { p, st, model }; }
   try{
     if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
     const res=await fetch(p.spreadsheet,{cache:"no-store"}); if (!res.ok) throw new Error(`${p.spreadsheet} couldn't be loaded (${res.status}).`);
     const wb=XLSX.read(await res.arrayBuffer(),{type:"array"});
-    const model=readPlanWorkbook(wb, SPECS[p.engine]), st=planStatus(model, SPECS[p.engine]); const lm=res.headers.get("Last-Modified"); st.updated = lm ? new Date(lm) : null;
+    const lm=res.headers.get("Last-Modified");
+    if (p.engine==="pcm"){ const model=readPcmWorkbook(wb), st=pcmStatus(model); st.updated = lm ? new Date(lm) : null; return { p, st, model }; }
+    const model=readPlanWorkbook(wb, SPECS[p.engine]), st=planStatus(model, SPECS[p.engine]); st.updated = lm ? new Date(lm) : null;
     return { p, st, model };
   } catch(e){ return { p, st:null, error: location.protocol==="file:" ? "Open this page from the website to see the figures; a page opened straight from your computer can't read the spreadsheet." : (e.message||String(e)) }; }
 }
@@ -542,22 +649,24 @@ function againstPlan(st){
 
 function renderTiles(results){
   const del=results.filter(r=>r.p.stage==="delivery"), plan=results.filter(r=>r.p.stage==="planning");
-  const rated=del.filter(r=>r.st);
+  const rated=del.filter(r=>r.st && r.st.rag), unrated=del.filter(r=>r.st && !r.st.rag);
   const counts={G:0,A:0,R:0}; for (const r of rated) counts[r.st.rag]++;
   const worst = rated.length ? rated.map(r=>r.st.rag).sort((a,b)=>RAG_ORDER[b]-RAG_ORDER[a])[0] : null;
   const host=$("tiles"); host.replaceChildren();
   const tile=(k,v,s)=>host.append(el("div",{class:"tile"}, el("span",{class:"k",text:k}), typeof v==="string"?el("span",{class:"v",text:v}):v, s?el("span",{class:"s",text:s}):null));
   tile("Programmes", String(results.length), [del.length&&`${del.length} in delivery`, plan.length&&`${plan.length} in planning`].filter(Boolean).join(" · "));
-  tile("Delivery status", worst ? ragBadge(worst,true, worst==="G" && rated.length>1 ? "All on track" : null) : el("span",{class:"v",text:"–"}),
-    rated.length ? `${counts.G} on track · ${counts.A} at risk · ${counts.R} off track` : "No programme figures available");
-  const ms = rated.filter(r=>r.st.nextMs).map(r=>({r, d:r.st.nextMs.end, label:r.st.nextMs.label})).sort((a,b)=>a.d<b.d?-1:1)[0];
-  tile("Next milestone", ms ? fLong.format(parse(ms.d)) : "–", ms ? `${ms.r.p.title}: ${ms.label} complete (planned)` : null);
-  const iss = rated.reduce((a,r)=>a+r.st.issuesOpen,0);
+  tile("Delivery status", worst ? ragBadge(worst,true, worst==="G" && rated.length>1 && !unrated.length ? "All on track" : null) : el("span",{class:"v",text:"–"}),
+    rated.length ? `${counts.G} on track · ${counts.A} at risk · ${counts.R} off track${unrated.length?` · ${unrated.length} not rated`:""}` : "No programme figures available");
+  const ms = del.filter(r=>r.st && r.st.nextMs).map(r=>({r, d:r.st.nextMs.end, label:r.st.nextMs.label, text:r.st.nextMs.text})).sort((a,b)=>a.d<b.d?-1:1)[0];
+  tile("Next milestone", ms ? (ms.text ? fMonthYear.format(parse(ms.d)) : fLong.format(parse(ms.d))) : "–", ms ? `${ms.r.p.title}: ${ms.text || `${ms.label} complete (planned)`}` : null);
+  const iss = del.filter(r=>r.st).reduce((a,r)=>a+(r.st.issuesOpen||0),0);
   tile("Open tracker issues", String(iss), "Problems found in the programme trackers that need fixing");
 
   const parts=[`${plural(del.length,"programme")} in delivery${plan.length?` and ${plan.length} in planning`:""}.`];
   for (const r of del){
     if (!r.st){ parts.push(`${r.p.title}: figures aren't available right now.`); continue; }
+    if (r.st.kind==="project"){ const st=r.st, acts=`${st.open} of ${st.actions} actions open${st.overdue?`, ${st.overdue} overdue`:""}`;
+      parts.push(st.rag ? `${r.p.title} is ${RAG_TEXT[st.rag].toLowerCase()}${st.reason?`: ${st.reason.replace(/\.$/,"")}`:""}; ${acts}.` : `${r.p.title} hasn't been rated by its project team yet; ${acts}.`); continue; }
     const st=r.st, pc=st.total?Math.round(st.installed/st.total*100):0;
     const fin = st.complete ? "complete" : `${st.basis==="forecast"?"forecast":"planned"} to finish ${fLong.format(parse(st.fcIso))}${st.slip===0?`, in line with the ${st.refName}`:`, ${plural(Math.abs(st.slip),"working day")} ${st.slip>0?"later":"earlier"} than the ${st.refName}`}`;
     parts.push(`${r.p.title} is ${RAG_TEXT[st.rag].toLowerCase()}: ${nf.format(st.installed)} of ${nf.format(st.total)} ${st.unit} ${st.spec.done} (${pc}%), ${fin}.`);
@@ -611,7 +720,7 @@ function renderProgramme({p, st, error}, i){
   const card=el("article",{class:"prog"+(p.stage==="delivery"?"":" planning"),"aria-labelledby":hid});
   const title=el("div",{class:"prog-title"}, el("h3",{id:hid,text:p.title}),
     el("span",{class:"stage",text:[STAGE_TEXT[p.stage]||p.stage, p.lead&&`Lead: ${p.lead}`].filter(Boolean).join(" · ")}));
-  const badge = p.stage==="delivery" ? ragBadge(st?st.rag:null, true, st?null:"Not available") : ragBadge(null, true, p.stage==="closed"?"Closed":"Not rated yet");
+  const badge = p.stage==="delivery" ? ragBadge(st?st.rag:null, true, st?(st.kind==="project"&&!st.rag?"Not rated yet":null):"Not available") : ragBadge(null, true, p.stage==="closed"?"Closed":"Not rated yet");
   card.append(el("div",{class:"prog-head"}, title, badge));
   if (p.description) card.append(el("p",{class:"desc",text:p.description}));
 
@@ -625,6 +734,7 @@ function renderProgramme({p, st, error}, i){
     if (linkFor(p)) card.append(el("div",{class:"prog-foot"}, el("a",{class:"btn",href:linkFor(p),text:(p.linkText||"Open the dashboard")+" →"})));
     return card;
   }
+  if (st.kind==="project") return renderProjectCard(card, p, st);
   card.append(el("p",{class:"reason",text:st.reason}));
 
   const pc=st.total?st.installed/st.total:0, pp=st.total?st.plannedToDate/st.total:0;
@@ -684,7 +794,7 @@ function renderRules(){
   li("G", `Forecast finish is no more than ${plural(R.greenMaxDays,"working day")} after the baseline finish.`);
   li("A", `Forecast finish is ${R.greenMaxDays+1} to ${R.amberMaxDays} working days after the baseline, or nothing has been logged for more than ${plural(R.staleLogDays,"working day")} that had work planned.`);
   li("R", `Forecast finish is more than ${plural(R.amberMaxDays,"working day")} after the baseline.`);
-  $("rulesNote").textContent = "The forecast takes what the Install Log says has actually been done and runs the rest of the plan at the pace achieved over the last 10 working days that had work planned or logged, the same as on each programme's dashboard. Until anything is logged, the planned finish is used. Programmes in planning aren't rated.";
+  $("rulesNote").textContent = "The forecast takes what the Install Log says has actually been done and runs the rest of the plan at the pace achieved over the last 10 working days that had work planned or logged, the same as on each programme's dashboard. Until anything is logged, the planned finish is used. Programmes in planning aren't rated. The patient monitoring replacement is a project rather than a count of devices, so its project team sets its status on the Status tab of its planner spreadsheet, and this page shows it as they set it.";
 }
 function renderFoot(){
   const f=$("foot"); f.replaceChildren();
@@ -735,7 +845,8 @@ async function exportAll(){
     const dashboards={}, models={};
     for (const r of RESULTS){
       if (!r.st || !r.model) continue;
-      models[r.p.engine]={...r.model, phases:[...r.model.phases], nwd:[...r.model.nwd], updated:r.st.updated?r.st.updated.toISOString():null};
+      models[r.p.engine] = r.p.engine==="pcm" ? {...r.model, updated:r.st.updated?r.st.updated.toISOString():null}
+        : {...r.model, phases:[...r.model.phases], nwd:[...r.model.nwd], updated:r.st.updated?r.st.updated.toISOString():null};
       if (r.p.link){ note.textContent=`Reading the ${r.p.short||r.p.title} dashboard…`; dashboards[r.p.engine]=await dashboardCopy(r.p); }
     }
     note.textContent="Making the file…";
