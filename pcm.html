@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Patient Monitoring Replacement page, version 1.0 (16 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Patient Monitoring Replacement page, version 1.1 (23 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Reads Barts_PCM_Replacement_Planner.xlsx from this folder. Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="1.0">
+<meta name="version" content="1.1">
 <title>Patient Monitoring Replacement</title>
 <meta name="description" content="Status, timeline, actions, risks and governance for the patient monitoring replacement at St Bartholomew's Hospital, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -98,17 +98,17 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .drop.over{outline:2px dashed var(--accent);outline-offset:4px}
 
 /* timeline */
-.tl-scroll{overflow-x:auto;position:relative}
-.tl{min-width:900px;position:relative;--label:300px;padding-bottom:26px}
+.tl-scroll{position:relative;container-type:inline-size}
+.tl{position:relative;--label:300px;padding-bottom:26px;overflow-x:clip}
 .tl-axis,.tl-row{display:grid;grid-template-columns:var(--label) 1fr}
-.tl-axis{height:44px;border-bottom:1px solid var(--line-strong)}
+.tl-axis{height:44px;border-bottom:1px solid var(--line-strong);position:relative;z-index:4}
 .tl-track{position:relative;min-width:0}
 .tl-axis .yr{position:absolute;top:2px;font:700 12.5px/1 var(--f-body);color:var(--fg);white-space:nowrap;transform:translateX(4px)}
-.tl-axis .mo{position:absolute;top:24px;font:500 12px/1 var(--f-body);color:var(--muted);white-space:nowrap;transform:translateX(-50%)}
+.tl-axis .mo{position:absolute;top:24px;font:500 12px/1 var(--f-body);color:var(--muted);white-space:nowrap;transform:translateX(-50%);background:var(--surface);padding:0 2px}
 .tl-grid{position:absolute;top:0;bottom:26px;right:0;left:var(--label);pointer-events:none}
 .tl-grid .gl{position:absolute;top:44px;bottom:0;width:1px;background:var(--line)}
 .tl-grid .gl.year{top:0;background:var(--line-strong)}
-.tl-grid .today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:3}
+.tl-grid .today{position:absolute;top:44px;bottom:0;width:2px;background:var(--today);z-index:3}
 .tl-grid .today span{position:absolute;bottom:-22px;left:4px;font:600 12px/1 var(--f-body);background:var(--surface);color:var(--today);padding:2px 3px;white-space:nowrap}
 .tl-grid .today.flip span{left:auto;right:4px}
 .tl-row{min-height:30px;align-items:stretch}
@@ -121,11 +121,14 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .tl-row .tl-track{height:30px}
 .bar{position:absolute;top:8px;height:14px;background:var(--c);border-radius:4px;min-width:6px;cursor:default}
 .bar.done{opacity:.45}
+.bar-text[hidden]{display:none}
 .bar-text{position:absolute;top:6px;font-size:12.5px;line-height:18px;white-space:nowrap;color:var(--fg2);pointer-events:none;background:var(--surface);padding:0 3px;border-radius:3px;z-index:4}
 .ms{position:absolute;top:8px;width:14px;height:14px;margin-left:-7px;transform:rotate(45deg);background:var(--c-milestone);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--c-milestone);cursor:default}
 .ms.done{background:var(--good);box-shadow:0 0 0 1px var(--good)}
 .ms.late{background:var(--crit-text);box-shadow:0 0 0 1px var(--crit-text)}
 .grpband{position:absolute;top:13px;height:4px;border-radius:2px;background:var(--line-strong)}
+@container (max-width:900px){ .tl{--label:210px} }
+@container (max-width:600px){ .tl{--label:120px} .bar-text{display:none} .tl-row .lbl2{font-size:12.5px;padding-right:8px;gap:5px} .tl-row.grp .lbl2{font-size:13px} }
 .tip{position:absolute;z-index:10;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:180px;max-width:300px}
 .tip b{display:block;font-size:13.5px}
 .st{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:13.5px}
@@ -207,8 +210,6 @@ table.mini{border-collapse:collapse;font-size:13.5px;min-width:min(560px,100%)}
 /* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .hdr,.top-inner,.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
-.tl-axis>:first-child,.tl-row>.lbl2{position:sticky;left:0;z-index:6;background:var(--surface)}
-.swipe{display:none}
 @media (max-width:640px){
   .wrap{padding-top:20px;gap:18px}
   section.panel{padding:16px 14px;gap:14px}
@@ -218,10 +219,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .fig b{font-size:20px}
   .panel-head p{font-size:14px}
   .hint{font-size:13px}
-  .tl{--label:136px;min-width:760px}
   .tl-row .lbl2{font-size:12.5px;padding-right:8px}
   .tl-row .lbl2 .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-  .swipe{display:block}
   .risks{grid-template-columns:minmax(0,1fr)}
   .team{grid-template-columns:minmax(0,1fr)}
   .filters input{min-width:0;width:100%}
@@ -259,7 +258,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <h1>Patient monitoring replacement</h1>
     <p class="sub">Replacing the GE patient monitoring with Philips across St Bartholomew's Hospital: status, timeline, actions, risks and who's involved. Everything here is read from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.0 · 16 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.1 · 23 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -287,7 +286,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <h2 id="h-tl">Timeline</h2>
         <p>Month by month, from the planner's Timeline tab. Faded bars and green diamonds are marked Complete.</p>
       </div>
-      <p class="hint swipe">Swipe the timeline sideways to see all of it. Tap a bar or diamond for its details.</p>
       <div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div><div class="tip" id="tlTip" hidden></div></div>
       <div class="legend" id="tlLegend"></div>
     </section>
@@ -359,7 +357,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 (() => {
 /* ================= settings ================= */
 const XLSX_FILE = "Barts_PCM_Replacement_Planner.xlsx";
-const PAGE_VERSION = "1.0 · 16 Nov 2026"; // keep in step with the version text in the header
+const PAGE_VERSION = "1.1 · 23 Nov 2026"; // keep in step with the version text in the header
 const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
 const LOGO_FILES = ["barts-health-logo.png", "barts-health-logo.svg", "barts-health-logo.jpg"];
 const CATEGORY_COLOURS = { procurement:"--c-procurement", infrastructure:"--c-infrastructure", planning:"--c-planning", implementation:"--c-implementation", evaluation:"--c-evaluation" };
@@ -489,7 +487,7 @@ function renderTimeline(){
   const axTrack=el("div",{class:"tl-track"}), grid=el("div",{class:"tl-grid","aria-hidden":"true"});
   for (let m=new Date(min); m<end; m=new Date(m.getFullYear(), m.getMonth()+1, 1)){
     const mid=x(new Date(m.getFullYear(), m.getMonth(), 15));
-    axTrack.append(el("span",{class:"mo",style:`left:${mid}%`,text:fMon.format(m).slice(0,3)}));
+    axTrack.append(el("span",{class:"mo","data-m":String(m.getMonth()),style:`left:${mid}%`,text:fMon.format(m).slice(0,3)}));
     if (m.getMonth()===0 || +m===+min){ axTrack.append(el("span",{class:"yr",style:`left:${x(m)}%`,text:String(m.getFullYear())})); }
     grid.append(el("div",{class:"gl"+(m.getMonth()===0?" year":""),style:`left:${x(m)}%`}));
   }
@@ -511,11 +509,11 @@ function renderTimeline(){
       if (t.type==="Milestone"){
         const mx=x(new Date(t.a.getFullYear(), t.a.getMonth(), 15));
         const d=el("div",{class:"ms"+(t.done?" done":t.late?" late":""),style:`left:${mx}%`,tabindex:"0",role:"img","aria-label":aria}); d.dataset.tip=JSON.stringify(tip);
-        track.append(d, el("span",{class:"bar-text",style:mx>78?`right:${100-mx+1.2}%`:`left:calc(${mx}% + 13px)`,text:t.what}));
+        track.append(d, el("span",{class:"bar-text","data-a":String(mx),"data-b":String(mx),"data-gap":"13",style:mx>78?`right:${100-mx+1.2}%`:`left:calc(${mx}% + 13px)`,text:t.what}));
       } else {
         const l=x(t.a), w=x(addDays(t.b,1))-l;
         const b=el("div",{class:"bar"+(t.done?" done":""),style:`--c:${c};left:${l}%;width:${w}%`,tabindex:"0",role:"img","aria-label":aria}); b.dataset.tip=JSON.stringify(tip);
-        track.append(b, el("span",{class:"bar-text",style:l+w>78?`right:${100-l+0.6}%`:`left:calc(${l+w}% + 6px)`,text:t.what}));
+        track.append(b, el("span",{class:"bar-text","data-a":String(l),"data-b":String(l+w),"data-gap":"6",style:l+w>78?`right:${100-l+0.6}%`:`left:calc(${l+w}% + 6px)`,text:t.what}));
       }
       tl.append(el("div",{class:"tl-row"}, el("div",{class:"lbl2"}, el("span",{class:"t",text:t.activity,title:t.activity}), kind?stChip(kind,"",kind==="done"?"✓︎":kind==="progress"?"▶︎":"!"):null), track));
     }
@@ -523,15 +521,35 @@ function renderTimeline(){
   let tx=null;
   if (W.today>=min && W.today<=max){ tx=x(W.today); grid.append(el("div",{class:"today"+(tx>88?" flip":""),style:`left:${tx}%`}, el("span",{text:`Today ${fShort.format(W.today)}`}))); }
   tl.append(grid);
-  // on a narrow screen, open the timeline scrolled so today is in view
-  if (tx!=null) requestAnimationFrame(()=>{ const sc=$("tlScroll"); if (sc.scrollWidth<=sc.clientWidth+4) return;
-    const lw=tl.querySelector(".tl-row .lbl2")?.offsetWidth||0, pos=lw+(tl.scrollWidth-lw)*tx/100; sc.scrollLeft=Math.max(0, pos-lw-(sc.clientWidth-lw)*0.6); });
+  fitTimeline();
   const lg=$("tlLegend"); lg.replaceChildren();
   const cats=[...new Set(items.filter(t=>t.type==="Activity").map(t=>t.category))];
   for (const cat of cats) lg.append(el("span",{class:"chip",style:`--c:var(${CATEGORY_COLOURS[(cat||"").toLowerCase()]||"--c-other"})`,text:cat||"Other"}));
   lg.append(el("span",{class:"chip msk",text:"Milestone"}), el("span",{class:"chip today",text:"Today"}));
 }
 
+// the timeline always fits its box: month names thin out to quarters, then to none, and the
+// labels beside the bars go on whichever side has room (or are left off when neither has)
+function fitTimeline(){
+  const tl=$("tl"), ax=tl.querySelector(".tl-axis .tl-track"); if (!ax || !ax.clientWidth) return;
+  const mos=[...ax.querySelectorAll(".mo")];
+  const fits=()=>{ const box=ax.getBoundingClientRect(); let last=-Infinity;
+    for (const m of mos){ if (m.hidden) continue; m.style.transform=""; let r=m.getBoundingClientRect();
+      // the first and last names stay inside the box rather than half off its edge
+      const shift=r.left<box.left ? box.left-r.left : r.right>box.right ? box.right-r.right : 0;
+      if (shift){ m.style.transform=`translateX(calc(-50% + ${shift}px))`; r=m.getBoundingClientRect(); }
+      if (r.left<last+6) return false; last=r.right; }
+    return true; };
+  for (const keep of [()=>true, m=>+m.dataset.m%3===0, m=>+m.dataset.m%6===0, ()=>false]){ mos.forEach(m=>m.hidden=!keep(m)); if (fits()) break; }
+  for (const s of tl.querySelectorAll(".bar-text")){
+    s.hidden=false; if (getComputedStyle(s).display==="none") continue;
+    const W=s.parentElement.clientWidth, a=+s.dataset.a/100*W, b=+s.dataset.b/100*W, gap=+s.dataset.gap, w=s.offsetWidth;
+    if (b+gap+w<=W-2){ s.style.left=`${b+gap}px`; s.style.right=""; }
+    else if (a-gap-w>=0){ s.style.left=`${a-gap-w}px`; s.style.right=""; }
+    else s.hidden=true;
+  }
+}
+if (window.ResizeObserver) new ResizeObserver(()=>fitTimeline()).observe($("tlScroll"));
 function renderMilestones(){
   const t=$("msTable"); t.replaceChildren();
   t.append(el("thead",{}, el("tr",{}, ...["Month","Milestone","Stage","Status","Notes"].map(h=>el("th",{text:h})))));

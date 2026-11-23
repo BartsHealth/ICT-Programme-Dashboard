@@ -63,6 +63,20 @@ The front screen has an **Export** section near the bottom. **Download web page 
 
 To make the file, the front screen opens each dashboard out of sight and takes a saved copy of it, which takes a few seconds. Do this from the website, not from a copy saved on your computer. The file is about 1 MB and works offline, like the single-dashboard copies described below. Keep it on SharePoint or Teams, or send it by email.
 
+## Index_Dashboard Master: one file you can update
+
+`Index_Dashboard Master.html` holds the overview and all three dashboards in one file, with the three planner spreadsheets saved inside it. Unlike the copy described above, you can update it yourself. It works offline and when kept on SharePoint, Teams or OneDrive: SharePoint downloads it when someone clicks it, and it opens in their browser from there.
+
+- **Updating the figures:** select **Update figures**, then do one of these:
+  - **Choose the folder…** (Edge or Chrome): pick the SharePoint folder that holds the planners. You only do this once. After that, **Update from this folder** reads the newest planner of each kind in that folder. **Save in this folder** writes the file back to the folder, replacing the old copy, and OneDrive then copies it to SharePoint.
+  - **Choose spreadsheets…**: pick one or more planners, or drag them onto the page.
+- **Saving:** select **Save** to keep the new figures in the file. If no folder has been chosen, Save downloads the file. Upload it to SharePoint in place of the old copy.
+- **Reaching SharePoint from these buttons:** sync the document library first. Open it in SharePoint and select **Sync**, or **Add shortcut to My files**. It then appears in File Explorer under the Trust's name.
+- **Which file is which:** each planner is recognised by its tabs, not its name, so a renamed copy still works. A site tracker or the original patient monitoring plan is turned away with a note, because tracker progress goes into the Wi-Fi planner first. Before the figures change, each new planner is opened by its dashboard. If the dashboard can't read it, the figures from before are kept.
+- **Today's date:** the overdue actions, late milestones and forecasts use today's date, the same as the website.
+- **Spreadsheet reader:** the file uses the current spreadsheet reader from its website when it's online, and the copy built into the file when it isn't.
+- **When a page changes:** if wifi.html or another page gets a new version, the master file needs rebuilding with the new pages.
+
 ## A copy of a dashboard for SharePoint or Teams
 
 **Download web page**, in the same Export section, saves the whole dashboard as one HTML file, for example `Barts_WiFi_Refresh_Dashboard_2026-11-10.html`. The figures, the Trust logo (once it's in the repository) and the Excel summary are built into it. It doesn't need the spreadsheet, the internet or any other file, so it works offline and sends nothing anywhere.
@@ -71,7 +85,26 @@ To make the file, the front screen opens each dashboard out of sight and takes a
 - **It's a snapshot.** It shows the figures as they were when it was saved, and says so at the top. Download a new one after the planner is updated.
 - Charts, tooltips, the minutes setting and the views all still work. The link back to the other pages is hidden, because they aren't in the file. **Download Excel summary** in the copy gives the Excel file made at the same time.
 
-**Why SharePoint downloads it instead of showing it:** SharePoint Online won't run web pages kept in a document library. It handles .html files in "strict" mode, which Microsoft no longer lets tenants turn off. The old workaround was to rename the file to .aspx, which needs "custom script" allowed on the site. Since 2024 Microsoft switches custom script off again after 24 hours. Since March 2026 SharePoint has also enforced a content security policy that blocks scripts from places it doesn't trust, including inline scripts. To show a dashboard inside a SharePoint page itself, it would need rebuilding as a SharePoint Framework (SPFx) web part, which the tenant's administrators would have to approve and install.
+**Why SharePoint downloads it instead of showing it:** SharePoint Online won't run web pages kept in a document library. It handles .html files in "strict" mode, which Microsoft no longer lets tenants turn off. The old workaround was to rename the file to .aspx, which needs "custom script" allowed on the site. Since 2024 Microsoft switches custom script off again after 24 hours. Since March 2026 SharePoint has also enforced a content security policy that blocks scripts from places it doesn't trust, including inline scripts. To show the dashboards inside a SharePoint page, put the live website in an Embed web part instead (next section).
+
+## Showing the front screen on a SharePoint page
+
+The live front screen can sit on a SharePoint page, such as the Project Delivery home page, in an **Embed** web part. The page stays here on GitHub and SharePoint shows it in a frame, so the SharePoint page is up to date as soon as a planner here is updated. Nothing on SharePoint needs changing after that.
+
+1. **Allow the address.** This is done once for the site, by a site owner. Go to **Settings** (the gear) › **Site information** › **View all site settings**, then under **Site Collection Administration** select **HTML Field Security**. Choose **Allow contributors to insert iframes only from the following domains**, type `bartshealth.github.io`, select **Add**, then **OK**. Until then, SharePoint says "Embedding content from this website isn't allowed".
+2. **Add the web part.** Edit the page, add a one-column section, add an **Embed** web part to it, and paste this code into it:
+
+   ```html
+   <iframe src="https://bartshealth.github.io/AP_Deployment/" width="100%" height="4000" style="border:0" title="ICT programme dashboard"></iframe>
+   ```
+
+3. **Add a link to the full page.** Above the Embed web part, add a **Button** or **Quick links** web part that opens `https://bartshealth.github.io/AP_Deployment/`. Then select **Republish**.
+
+- **Height:** a height of 4000 shows the whole front screen on a desktop with no scroll bar inside the frame. A lower height, such as 1400, shows the top part with its own scroll bar.
+- **Opening the dashboards:** the **Open … dashboard** buttons open each dashboard inside the frame, and **← All programmes** comes back.
+- **Downloads:** SharePoint can limit what a page in a frame is allowed to do. If a download button does nothing on SharePoint, use it from the full page.
+- **Who can see it:** anyone who can open the SharePoint page. It is the same public website.
+- **Making it the site's home page:** put the Embed web part on a new page of its own and publish it. Then go to **Settings** › **Site contents** › **Site Pages**, select the page, and choose **…** › **Make homepage**. This needs a site owner. The old home page stays in Site Pages, and **Make homepage** on it switches back. The `index.html` file itself can't be the home page: SharePoint only uses pages from Site Pages as a home page, and it downloads .html files rather than showing them.
 
 ## How the status is set
 
@@ -126,8 +159,8 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.11** and the patient monitoring dashboard **1.0** (16 Nov 2026); the Wi-Fi dashboard is **2.5** and the printer dashboard **1.7** (10 Nov 2026). The timelines always list phases and areas in date order. Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
-- **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline scrolls sideways with the names kept in view; tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
+- Page versions are shown under each title: the front screen is **1.12** (16 Nov 2026); the Wi-Fi dashboard is **2.6**, the printer dashboard **1.8** and the patient monitoring dashboard **1.1** (23 Nov 2026). The timelines always list phases and areas in date order, and always fit the width of the page with no scroll bars: on a narrower screen the name column gets narrower, long names end in "…", and the month labels thin out (years dropped except where the year changes, then every other month, or quarters on the patient monitoring timeline). Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline fits the screen, with shorter names and fewer month labels, and the notes beside the patient monitoring bars are left off (tap a bar to see them); tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.
 - Opening a page straight from your computer can't read its spreadsheet automatically. The dashboards ask you to choose the file instead.

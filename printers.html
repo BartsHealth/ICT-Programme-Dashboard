@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Printer Replacement Planner page, version 1.7 (10 Nov 2026). Built from the Wi-Fi planner page (2.5) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Printer Replacement Planner page, version 1.8 (23 Nov 2026). Built from the Wi-Fi planner page (2.5) with printer wording and the Areas tab. Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="1.7">
+<meta name="version" content="1.8">
 <title>Printer Replacement Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health printer replacement, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -125,30 +125,37 @@ table.mini{border-collapse:collapse;width:100%;font-size:13px}
 .lbl{font:600 12.5px var(--f-body);fill:var(--fg)}
 
 /* timeline */
-.tl-scroll{overflow-x:auto;position:relative}
-.tl{min-width:780px;position:relative;--label:260px}
+.tl-scroll{position:relative;container-type:inline-size}
+.tl{position:relative;--label:260px;overflow-x:clip}
 .tl-axis,.tl-row{display:grid;grid-template-columns:var(--label) 1fr}
 .tl-axis{height:28px;border-bottom:1px solid var(--line-strong)}
 .tl-track{position:relative;min-width:0}
 .tl-axis .tick{position:absolute;top:6px;font:500 12px/1 var(--f-mono);color:var(--muted);white-space:nowrap;transform:translateX(4px)}
+.tl-axis .tick.end{transform:translateX(calc(-100% - 4px))}
 .tl-grid{position:absolute;inset:0 0 0 var(--label);pointer-events:none}
 .tl-grid .gl{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
 .tl-grid .gl.month{background:var(--line-strong)}
 .tl-grid .today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:1}
 .tl-grid .today span,.tl-grid .brk span{position:absolute;top:-1px;left:4px;font:500 12px/1 var(--f-mono);background:var(--surface);padding:2px 3px;white-space:nowrap}
 .tl-grid .today span{color:var(--today)}
+.tl-grid .today.flip span{left:auto;right:4px}
 .tl-grid .brk{position:absolute;top:0;bottom:0;z-index:1;border-left:1px dashed var(--line-strong);border-right:1px dashed var(--line-strong);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted) 22%,transparent) 0 4px,transparent 4px 9px)}
 .tl-grid .brk span{color:var(--fg2)}
-.tl-row{height:26px;align-items:center}
-.tl-row .lbl2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;display:flex;align-items:center;gap:8px}
+.tl-row{height:26px;align-items:stretch}
+.tl-row .lbl2{font-size:13px;white-space:nowrap;overflow:hidden;padding-right:12px;display:flex;align-items:center;gap:8px;min-width:0}
+.tl-row .lbl2 .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tl-row.ph{height:30px;margin-top:6px}
 .tl-row.ph .lbl2{font-weight:600;font-family:var(--f-display);font-size:14px}
 .bar{position:absolute;top:6px;height:14px;background:var(--c);border-radius:4px;min-width:4px}
+.tl-row.ph .bar.span{top:11px}
 .bar.span{top:9px;height:8px;background:color-mix(in srgb,var(--c) 30%,transparent);border-radius:3px}
 .bar.fixed{background-image:repeating-linear-gradient(90deg,transparent 0 6px,rgba(255,255,255,.35) 6px 8px)}
 .tip{position:absolute;z-index:10;pointer-events:none;background:var(--raised);border:1px solid var(--line-strong);box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:6px;padding:8px 10px;font-size:12.5px;line-height:1.45;min-width:180px;max-width:280px}
 .tip b{display:block;font-size:13.5px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+@container (max-width:760px){ .tl{--label:190px} }
+@container (max-width:560px){ .tl{--label:118px} .tl-row .lbl2{font-size:12px;padding-right:6px;gap:5px} .tl-row.ph .lbl2{font-size:12.5px} .tl-grid .brk span{display:none} }
+@container (max-width:380px){ .tl{--label:100px} }
 /* ahead or behind plan */
 .var-wrap{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:18px;margin-top:6px}
 .var-wrap h3{font-size:17px;margin:0}
@@ -199,12 +206,10 @@ details.iss summary{cursor:pointer;font-family:var(--f-display);font-weight:600;
 .x-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:16px}
 .x-row .btn:disabled{opacity:.6;cursor:progress}
 #export{scroll-margin-top:12px}
-@media (max-width:560px){ .tl{--label:150px} .figures{gap:8px 20px} }
+@media (max-width:560px){ .figures{gap:8px 20px} }
 /* ---- phones (iPhone 15 is 393px wide; most Android phones 360 to 412px) ---- */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .hdr,.top-inner,.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
-.tl-axis>:first-child,.tl-row>.lbl2{position:sticky;left:0;z-index:4;background:var(--surface)}
-.swipe{display:none}
 @media (max-width:640px){
   .wrap{padding-top:20px;gap:18px}
   section.panel{padding:16px 14px;gap:14px}
@@ -212,9 +217,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .fig b{font-size:21px}
   .panel-head p{font-size:14px}
   .hint{font-size:13px}
-  .tl{--label:132px;min-width:640px}
   .tl-row .lbl2{font-size:12.5px;padding-right:8px}
-  .swipe{display:block}
   .mini td.ph{min-width:0}
   .wi-head b{font-size:24px}
   /* area / building table becomes one card per row */
@@ -262,7 +265,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <h1>Printer replacement</h1>
     <p class="sub">Every site, building and floor in the printer replacement, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 1.7 · 10 Nov 2026</span>
+    <span class="ver" id="ver">Page version 1.8 · 23 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -335,7 +338,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <div class="panel-head">
         <h2 id="h-tl">Timeline</h2>
         <div class="legend" id="legend"></div>
-        <p class="hint swipe">Swipe sideways on the timeline to see all the dates; the names stay in view.</p>
       </div>
       <div class="tl-scroll" id="tlScroll">
         <div id="timeline"></div>
@@ -384,7 +386,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_Printer_Replacement_Planner.xlsx";
-const PAGE_VERSION = "1.7 · 10 Nov 2026";
+const PAGE_VERSION = "1.8 · 23 Nov 2026";
 const DONE_WORD = "replaced"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
@@ -890,8 +892,9 @@ function renderTimeline(plan, ph){
   const span=(max-min)||1, x=d=>((d-min)/span*100), days=span/864e5;
   const tl=el("div",{class:"tl"}); const axis=el("div",{class:"tl-axis"}, el("div"), el("div",{class:"tl-track"})); const grid=el("div",{class:"tl-grid"});
   if (days<=200) for (let w=new Date(min); w<max; w=addDays(w,7)) grid.append(el("div",{class:"gl",style:`left:${x(w)}%`}));
-  axis.lastChild.append(el("span",{class:"tick",style:"left:0%",text: days<=120?fShort.format(min):fMonth.format(min)}));
-  for (let m=new Date(min.getFullYear(),min.getMonth()+1,1); m<max; m=new Date(m.getFullYear(),m.getMonth()+1,1)){ grid.append(el("div",{class:"gl month",style:`left:${x(m)}%`})); if (x(m)>6) axis.lastChild.append(el("span",{class:"tick",style:`left:${x(m)}%`,text:fMonth.format(m)})); }
+  if (days<=120) axis.lastChild.append(el("span",{class:"tick",style:"left:0%","data-y":String(min.getFullYear()),text:fShort.format(min)}));
+  else { const [mo,yy]=fMonth.format(min).split(" "); axis.lastChild.append(el("span",{class:"tick",style:"left:0%","data-y":String(min.getFullYear())}, mo, el("span",{class:"yy",text:" "+(yy||"")}))); }
+  for (let m=new Date(min.getFullYear(),min.getMonth()+1,1); m<max; m=new Date(m.getFullYear(),m.getMonth()+1,1)){ grid.append(el("div",{class:"gl month",style:`left:${x(m)}%`})); if (x(m)>6){ const [mo,yy]=fMonth.format(m).split(" "); axis.lastChild.append(el("span",{class:"tick",style:`left:${x(m)}%`,"data-y":String(m.getFullYear())}, mo, el("span",{class:"yy",text:" "+(yy||"")}))); } }
   // shade runs of non-working weekdays (3 or more), such as the Christmas holiday
   const off=[...model.nwd.keys()].sort(); let run=[];
   const flush=()=>{ if (run.length>=3){ const s=parse(run[0]), e=addDays(parse(run[run.length-1]),1); if (e>min && s<max){ const l=x(s<min?min:s), r=x(e>max?max:e);
@@ -902,19 +905,19 @@ function renderTimeline(plan, ph){
   }
   flush();
   const today=todayDate();
-  if (today>=min && today<max) grid.append(el("div",{class:"today",style:`left:${x(today)}%`}, el("span",{text:"Today"})));
+  if (today>=min && today<max) grid.append(el("div",{class:"today"+(x(today)>85?" flip":""),style:`left:${x(today)}%`}, el("span",{text:"Today"})));
   tl.append(axis); const body=el("div",{style:"position:relative"}); body.append(grid);
   // Always chronological: phases by start date, and buildings within each phase by start then end date (order of works breaks ties)
   const LAST="9999-12-31";
   const phs=[...ph].sort((a,b)=>(a.start||LAST).localeCompare(b.start||LAST) || (a.end||LAST).localeCompare(b.end||LAST) || a.no-b.no);
   for (const p of phs){
-    const head=el("div",{class:"tl-row ph"}, el("div",{class:"lbl2"}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:String(p.no)}), el("span",{text:p.label})), el("div",{class:"tl-track"}));
+    const head=el("div",{class:"tl-row ph"}, el("div",{class:"lbl2",title:p.label}, el("span",{class:"chip",style:`--c:${siteVar(p.site)}`,text:String(p.no)}), el("span",{class:"t",text:p.label})), el("div",{class:"tl-track"}));
     if (p.start&&p.end){ const s=parse(p.start), e=parse(p.end); const b=el("div",{class:"bar span",style:`--c:${siteVar(p.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`});
       b.dataset.tip=JSON.stringify({t:`${p.no}. ${p.label}`, l:[range(s,e), `${workDays(s,e)} working days · ${nf.format(p.aps)} printers`]}); head.lastChild.append(b); }
     body.append(head);
     const prs=model.rows.filter(r=>r.phase===p.no && (inScope(r)||isFixed(r))).map(r=>({r,d:plan.get(r.id)}))
       .sort((a,b)=>((a.d&&a.d.start)||LAST).localeCompare((b.d&&b.d.start)||LAST) || ((a.d&&a.d.end)||LAST).localeCompare((b.d&&b.d.end)||LAST) || a.r.order-b.r.order);
-    for (const {r,d} of prs){ const row=el("div",{class:"tl-row"}, el("div",{class:"lbl2",title:r.building,text:shortName(r)}), el("div",{class:"tl-track"}));
+    for (const {r,d} of prs){ const row=el("div",{class:"tl-row"}, el("div",{class:"lbl2",title:r.building}, el("span",{class:"t",text:shortName(r)})), el("div",{class:"tl-track"}));
       if (d){ const s=parse(d.start), e=parse(d.end);
         const b=el("div",{class:"bar"+(d.fixed?" fixed":""),tabindex:"0",style:`--c:${siteVar(r.site)};left:${x(s)}%;width:${x(addDays(e,1))-x(s)}%`,"aria-label":`${r.building}, ${range(s,e)}`});
         b.dataset.tip=JSON.stringify({t:r.building, l:[`${r.site} · ${r.siteName}`, range(s,e), `${workDays(s,e)} working days · ${r.aps} printers`, d.fixed?"Fixed dates":null, `Status: ${r.status}`]});
@@ -922,8 +925,22 @@ function renderTimeline(plan, ph){
       body.append(row);
     }
   }
-  tl.append(body); host.append(tl);
+  tl.append(body); host.append(tl); fitTicks(axis.lastChild);
   const lg=$("legend"); lg.replaceChildren(); for (const s of [...new Set(ph.map(p=>p.site))]) lg.append(el("span",{class:"chip",style:`--c:${siteVar(s)}`,text:s}));
+}
+// month labels that fit the width: drop the years (keeping the first and each new year), then every other month, until none overlap or run off the end
+function fitTicks(track){
+  const ticks=[...track.querySelectorAll(".tick")]; if (!ticks.length || !track.clientWidth) return;
+  const fits=()=>{ const box=track.getBoundingClientRect(); let last=-Infinity;
+    for (const t of ticks){ if (t.hidden) continue; t.classList.remove("end"); let r=t.getBoundingClientRect();
+      if (r.right>box.right){ t.classList.add("end"); r=t.getBoundingClientRect(); }
+      if (r.left<last+8 || r.left<box.left-1) return false; last=r.right; }
+    return true; };
+  const use=(short, step)=>{ let prev=null;
+    ticks.forEach((t,i)=>{ t.hidden=i>0 && i%step!==0; const yy=t.querySelector(".yy");
+      if (yy) yy.hidden=short && !t.hidden && prev!==null && t.dataset.y===prev;
+      if (!t.hidden) prev=t.dataset.y; }); };
+  for (const [short, step] of [[false,1],[true,1],[true,2],[true,3],[true,4],[true,6]]){ use(short, step); if (fits()) return; }
 }
 function renderTable(plan, ph){
   const t=$("sched"); t.replaceChildren();
