@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Barts Wi-Fi Refresh Planner page, version 2.6 (23 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
+<!-- Barts Wi-Fi Refresh Planner page, version 2.7 (25 Nov 2026). Change PAGE_VERSION below and the version text in the header when you edit this file.
      Uses the Trust logo from this folder (barts-health-logo.png, .svg or .jpg), the same as index.html. -->
 <html lang="en-GB">
 <head>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Arimo has the same shapes and widths as Arial and is used first so iPhones, Android phones and PCs all show the same type -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;500;600;700&display=swap">
-<meta name="version" content="2.6">
+<meta name="version" content="2.7">
 <title>Wi-Fi Refresh Planner</title>
 <meta name="description" content="Order of works and dates for the Barts Health Wi-Fi access point refresh, read from the planner spreadsheet.">
 <!-- SheetJS reads the .xlsx file in the browser -->
@@ -77,6 +77,30 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);box-shadow:0 4px 0 var(--nhs-dark-blue)}
 .btn.primary:hover{background:var(--nhs-dark-blue)}
 .drop.over{outline:2px dashed var(--accent);outline-offset:4px}
+
+/* importing tracker updates */
+.top-links{align-items:center}
+.btn.on-blue{background:var(--white);border-color:var(--white);color:var(--nhs-blue);box-shadow:0 4px 0 var(--nhs-dark-blue);margin-left:auto}
+.btn.on-blue:hover{background:#E8EDEE}
+.btn:disabled{opacity:.6;cursor:default}
+.imp{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--nhs-blue);border-radius:4px;padding:18px 20px;display:grid;gap:12px}
+.imp h2{margin:0;font:600 20px/1.25 var(--f-display)}
+.imp h2:focus,.imp h2:focus-visible{outline:none;box-shadow:none}
+@media (max-width:560px){ .btn.on-blue{margin-left:0;width:100%} }
+.imp p{margin:0;max-width:80ch}
+.imp-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.imp-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.imp-files{display:grid;gap:10px}
+.imp-file{border:1px solid var(--line);border-left:4px solid var(--c,var(--line-strong));border-radius:4px;padding:10px 14px;background:var(--raised);display:grid;gap:6px;min-width:0}
+.imp-file h3{margin:0;font-size:15.5px;line-height:1.35}
+.imp-file .src{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.imp-file ul{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px}
+.imp-file li.warn::marker{color:var(--warn)}
+.imp-file li.warn{color:var(--fg)}
+.imp-total{font-weight:700}
+.imp-saved{font-size:14px}
+.imp.unsaved{border-top-color:var(--warn)}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font-weight:400}
 
 /* order of works */
 .strip{display:flex;gap:2px;height:30px;border-radius:5px;overflow:hidden}
@@ -258,12 +282,12 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 <header class="top">
   <div class="top-inner">
-    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export ↓</a></div>
+    <div class="top-links"><a class="back" href="index.html">← All programmes</a><a class="back" href="#export" id="exportJump" hidden>Export ↓</a><button class="btn on-blue" type="button" id="impBtn" disabled>Import tracker updates</button><input type="file" id="impPick" accept=".xlsx,.xlsm" multiple hidden></div>
     <p class="eyebrow">ICT programme</p>
     <h1>Wi-Fi access point refresh</h1>
     <p class="sub">Every site and building in the access point refresh, in the order the work is being done. The dates are worked out from the planner spreadsheet each time this page opens.</p>
     <div class="source" id="source"></div>
-    <span class="ver" id="ver">Page version 2.6 · 23 Nov 2026</span>
+    <span class="ver" id="ver">Page version 2.7 · 25 Nov 2026</span>
   </div>
 </header>
 <div class="wrap">
@@ -279,6 +303,18 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   </div>
 
   <main id="main" hidden style="display:grid;gap:24px">
+    <section class="imp" id="imp" aria-labelledby="h-imp" hidden>
+      <div class="imp-head"><h2 id="h-imp" tabindex="-1">Import tracker updates</h2><button class="linkbtn" type="button" id="impClose">Close</button></div>
+      <p id="impIntro">Choose the latest site progress trackers: any of RLH, MEH, SBH, RS, NUH and WCH. New installs are added to the Install Log, and each building's status, scope, pre-migration issues and notes are brought up to date. Nothing is saved until you download the updated planner.</p>
+      <div class="imp-files" id="impFiles" aria-live="polite"></div>
+      <p class="imp-total" id="impTotal" hidden></p>
+      <div class="imp-row" id="impActions" hidden>
+        <button class="btn primary" type="button" id="impSave">Download updated planner</button>
+        <button class="btn" type="button" id="impMore">Import more</button>
+        <button class="linkbtn" type="button" id="impUndo">Undo the import</button>
+      </div>
+      <p class="imp-saved hint" id="impSaved" aria-live="polite"></p>
+    </section>
     <div class="figures-panel">
       <div class="figures" id="figures" aria-live="polite"></div>
       <div class="banner" id="banner" hidden></div>
@@ -384,7 +420,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 "use strict";
 // The spreadsheet this page reads. Keep it in the same folder as this page.
 const XLSX_FILE = "Barts_WiFi_Refresh_Planner.xlsx";
-const PAGE_VERSION = "2.6 · 23 Nov 2026";
+const PAGE_VERSION = "2.7 · 25 Nov 2026";
 const DONE_WORD = "installed"; // what the Install Log counts
 // The Trust logo. The first of these files found in this folder is used; if none is there the name is shown as text.
 const SNAP = window.SNAPSHOT || null; // set when this page is a saved copy with its figures built in
@@ -459,13 +495,16 @@ function readWorkbook(wb, source){
   const missing = need.filter(k=>!(k in col));
   if (missing.length) throw new Error("The Buildings tab is missing these columns: "+missing.join(", ")+".");
   const g = (r,k) => k in col ? r[col[k]] : null;
+  const bRange = wb.Sheets["Buildings"]["!ref"] ? XLSX.utils.decode_range(wb.Sheets["Buildings"]["!ref"]).s : {r:0,c:0};
+  const bCols = {}; for (const [k,i] of Object.entries(col)) bCols[k]=XLSX.utils.encode_col(i+bRange.c);
   const rows=[];
   for (let i=hr+1;i<gb.length;i++){
     const r=gb[i]||[]; const order=cellNum(g(r,"order")); if (order==null) continue;
     const listed=cellNum(g(r,"rows in tracker"))||0, oos=cellNum(g(r,"out of scope"))||0, dup=cellNum(g(r,"duplicate rows"))||0;
     rows.push({ id:"b"+i, order, phase:cellNum(g(r,"phase")), site:cellText(g(r,"site")), siteName:cellText(g(r,"site name")), building:cellText(g(r,"building")),
       floors:cellText(g(r,"floors")), listed, oos, dup, aps:listed-oos-dup, pre:cellNum(g(r,"pre-migration issues"))||0,
-      fixedStart:cellDate(g(r,"fixed start")), fixedEnd:cellDate(g(r,"fixed end")), status:cellText(g(r,"status"))||"Not started", notes:cellText(g(r,"notes")) });
+      fixedStart:cellDate(g(r,"fixed start")), fixedEnd:cellDate(g(r,"fixed end")), status:cellText(g(r,"status"))||"Not started", notes:cellText(g(r,"notes")),
+      sheetRow: bRange.r+i+1 });
   }
   rows.sort((a,b)=>a.order-b.order);
   if (!rows.length) throw new Error("No buildings found on the Buildings tab.");
@@ -494,15 +533,20 @@ function readWorkbook(wb, source){
     for (let i=h+1;i<gi.length;i++){ const r=gi[i]||[]; if (!cellText(r[1])) continue; const o={}; hdr.forEach((k,j)=>{ if (k) o[k]=cellText(r[j]); }); issues.push(o); } } }
 
   // Install log: APs actually installed, one row per building per day
-  const log=[]; const gl = grid("Install Log");
+  const log=[]; const gl = grid("Install Log"); let logSheet=null;
   if (gl){ const h=findRow(gl, r=>norm(r[0])==="date" && r.some(c=>norm(c).startsWith("aps installed")));
     if (h>=0){ const hdr=(gl[h]||[]).map(norm); const ci=k=>hdr.findIndex(x=>x.startsWith(k));
       const cd=ci("date"), cb=ci("building"), ca=ci("aps installed"), cn=ci("notes");
+      const lRange = wb.Sheets["Install Log"]["!ref"] ? XLSX.utils.decode_range(wb.Sheets["Install Log"]["!ref"]).s : {r:0,c:0};
+      let last=h;
       for (let i=h+1;i<gl.length;i++){ const r=gl[i]||[]; const d=cellDate(r[cd]); const n=cellNum(r[ca]);
-        if (d && n!=null && n>0) log.push({ date:d, building:cb>=0?cellText(r[cb]):"", aps:n, notes:cn>=0?cellText(r[cn]):"" }); } } }
+        if ([cd,cb,ca,cn].some(c=>c>=0 && cellText(r[c])!=="")) last=i;
+        if (d && n!=null && n>0) log.push({ date:d, building:cb>=0?cellText(r[cb]):"", aps:n, notes:cn>=0?cellText(r[cn]):"" }); }
+      const L=c=>c>=0?XLSX.utils.encode_col(c+lRange.c):null;
+      logSheet={ next:lRange.r+last+2, date:L(cd), building:L(cb), aps:L(ca), notes:L(cn) }; } }
   log.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
 
-  return { rows, settings, phases, baselineName, nwd, issues, log, source };
+  return { rows, settings, phases, baselineName, nwd, issues, log, source, bCols, logSheet };
 }
 
 /* ---------------- working days and the schedule ---------------- */
@@ -1246,7 +1290,7 @@ function applySnapshotMode(){
   const saved=new Date(SNAP.savedAt);
   document.querySelector(".top .sub").textContent=`A saved copy of the dashboard, made on ${fLong.format(saved)} at ${saved.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}. The figures in it don't change; a new copy is needed when the planner is updated.`;
   $("ver").textContent=`Saved copy · page version ${SNAP.page||PAGE_VERSION}`;
-  $("snapPart").hidden=true;
+  $("snapPart").hidden=true; $("impBtn").hidden=true;
   if (!SNAP.xlsx) $("xlPart").hidden=true;
 }
 
@@ -1285,7 +1329,8 @@ function load(buf, source){
     if (typeof XLSX==="undefined") throw new Error("The spreadsheet reader (SheetJS) didn't load. Check the network can reach cdn.sheetjs.com.");
     const wb=XLSX.read(buf,{type:"array"});
     model=readWorkbook(wb, source); curve=null; mins=model.settings.mins;
-    $("loader").hidden=true; $("main").hidden=false;
+    plannerBuf=buf; if (!originalBuf){ originalBuf=buf; originalSource=source; }
+    $("loader").hidden=true; $("main").hidden=false; $("impBtn").disabled=false;
     fillSelect(); renderAll(); lastW=innerWidth; $("exportJump").hidden=false;
   } catch(err){ showLoader("Couldn't read the spreadsheet", err.message || String(err)); }
 }
@@ -1302,6 +1347,287 @@ const drop=$("loader");
 drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("over"); });
 drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
 drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("over"); readFile(e.dataTransfer.files[0]); });
+
+/* ---------------- importing the site progress trackers ----------------
+   Each tracker has a tab per building with one row per AP. A row counts as installed when its status is
+   COMPLETE or ISSUE; PRE-MIGRATION ISSUE, NOT STARTED and anything else don't count. The import compares
+   each building's installs in the tracker with the planner's Install Log and adds only the difference, so
+   corrections already made in the log are kept. The planner file itself is edited cell by cell, so its
+   formulas, formats and checks stay exactly as they are. */
+let plannerBuf=null, originalBuf=null, originalSource=null, imported=[], impDirty=false;
+const SITES = { RLH:"Royal London Hospital", MEH:"Mile End Hospital", SBH:"St Bartholomew's Hospital", RS:"Remote Sites", NUH:"Newham University Hospital", WCH:"Whipps Cross Hospital" };
+const INSTALLED = new Set(["COMPLETE","ISSUE"]);
+const listAnd = a => a.length<2 ? a.join("") : a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+const plural = (n, one, many) => `${nf.format(n)} ${n===1?one:(many||one+"s")}`;
+const floorList = fl => { // "the ground floor and floors 1 and 2"
+  const named={ SB:"the sub-basement", B:"the basement", LG:"the lower ground floor", G:"the ground floor" };
+  const a=[...fl], words=["SB","B","LG","G"].filter(f=>a.includes(f)).map(f=>named[f]);
+  const nums=a.filter(f=>!(f in named)).sort((x,y)=>(+x)-(+y) || String(x).localeCompare(String(y)));
+  if (nums.length===1) words.push(`floor ${nums[0]}`); else if (nums.length) words.push(`floors ${listAnd(nums)}`);
+  return listAnd(words); };
+// floors as the planner writes them: "B, G, 1–5"
+function floorText(fl){
+  const named=["SB","B","LG","G"].filter(f=>fl.has(f)), nums=[...fl].filter(f=>/^\d+$/.test(f)).map(Number).sort((a,b)=>a-b);
+  const other=[...fl].filter(f=>f && !named.includes(f) && !/^\d+$/.test(f)).sort(), parts=[...named];
+  for (let i=0;i<nums.length;){ let j=i; while (j+1<nums.length && nums[j+1]===nums[j]+1) j++; parts.push(i===j?String(nums[i]):`${nums[i]}–${nums[j]}`); i=j+1; }
+  return [...parts, ...other].join(", ");
+}
+function floorSet(text){ const out=new Set();
+  for (const part of String(text||"").split(",")){ const p=part.trim(); const m=p.match(/^(\d+)\s*[–-]\s*(\d+)$/);
+    if (m) for (let i=+m[1]; i<=+m[2]; i++) out.add(String(i)); else if (p) out.add(p); }
+  return out; }
+// dates in the trackers: day-first text, or a date typed day-first into a cell that Excel reads month-first
+function trackerDate(v, lo, hi){
+  if (typeof v==="number" && isFinite(v)){
+    const p=XLSX.SSF.parse_date_code(v); if (!p) return { d:null, how:"bad" };
+    const d=new Date(p.y,p.m-1,p.d); if (d>=lo && d<=hi) return { d, how:"as is" };
+    if (p.d<=12){ const sw=new Date(p.y,p.d-1,p.m); if (sw>=lo && sw<=hi) return { d:sw, how:"swapped" }; }
+    return { d:null, how:"implausible", raw:fLong.format(d) };
+  }
+  const t=cellText(v); if (!t) return { d:null, how:"blank" };
+  const m=t.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2}|\d{4})$/);
+  if (m){ const y=m[3].length===2?2000+ +m[3]:+m[3], d=new Date(y,+m[2]-1,+m[1]);
+    if (d.getMonth()===+m[2]-1 && d>=lo && d<=hi) return { d, how:"text" }; return { d:null, how:"implausible", raw:t }; }
+  return { d:null, how:"text", raw:t };
+}
+function readTracker(buf, file){
+  const wb=XLSX.read(buf,{type:"array"});
+  if (wb.Sheets["Buildings"] && wb.Sheets["Install Log"]) return { kind:"planner", name:file.name };
+  const saved = wb.Props && wb.Props.ModifiedDate ? new Date(wb.Props.ModifiedDate) : file.lastModified ? new Date(file.lastModified) : new Date();
+  const tabs=[];
+  for (const name of wb.SheetNames){
+    const g=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1, raw:true, defval:null, blankrows:true});
+    let h=-1; for (let i=0;i<Math.min(g.length,20);i++) if ((g[i]||[]).some(c=>cellText(c).toLowerCase()==="new ap hostname")){ h=i; break; }
+    if (h<0) continue;
+    const hdr=(g[h]||[]).map(c=>cellText(c).toLowerCase()); const ci=k=>hdr.indexOf(k);
+    const cH=ci("new ap hostname"), cF=ci("floor"), cS=ci("ap installation status"), cD=ci("completed migration date");
+    const aps=[];
+    for (let i=h+1;i<g.length;i++){ const r=g[i]||[]; const host=cellText(r[cH]);
+      if (!host || !/^\S+$/.test(host) || !host.includes("-") || !/\d/.test(host)) continue; // headings such as "Snags" aren't APs
+      aps.push({ host, key:host.replace(/-C$/i,"").toUpperCase(), floor:cF>=0?cellText(r[cF]).toUpperCase():"", status:cS>=0?cellText(r[cS]).toUpperCase():"", raw:cD>=0?r[cD]:null }); }
+    tabs.push({ name, aps });
+  }
+  if (!tabs.length) return { kind:"other", name:file.name };
+  const up=file.name.toUpperCase(); let site=null;
+  for (const code of Object.keys(SITES)) if (new RegExp(`(^|[^A-Z])${code}([^A-Z]|$)`).test(up)){ site=code; break; }
+  if (!site){ // no site in the name: go by which planner buildings the tabs match
+    const votes={}; for (const t of tabs) for (const r of model.rows) if (r.building===t.name || r.building.startsWith(t.name+" (")) votes[r.site]=(votes[r.site]||0)+1;
+    site=Object.entries(votes).sort((a,b)=>b[1]-a[1])[0]?.[0]||null; }
+  return { kind:"tracker", name:file.name, site, saved, tabs };
+}
+// what one tracker means for the planner: the cells to change and the lines to report
+function compareTracker(t){
+  const lines=[], cells=[], adds=[];
+  const say=(text, warn)=>lines.push({ text, warn:!!warn });
+  const logged=new Map(); for (const e of model.log){ if (!logged.has(e.building)) logged.set(e.building,new Map()); const m=logged.get(e.building); m.set(e.date,(m.get(e.date)||0)+e.aps); }
+  const firstDay = [model.log[0]?.date, ...model.rows.map(r=>r.fixedStart), model.settings.start].filter(Boolean).sort()[0];
+  const lo=addDays(parse(firstDay),-7), hi=new Date(t.saved); hi.setHours(23,59,59,999);
+  const savedDay=new Date(t.saved); savedDay.setHours(0,0,0,0);
+  const siteRows=model.rows.filter(r=>r.site===t.site);
+  const odd=new Map(), late=[];
+  for (const tab of t.tabs){
+    const targets=siteRows.filter(r=>r.building===tab.name || r.building.startsWith(tab.name+" ("));
+    if (!targets.length){ say(`${tab.name} (${plural(tab.aps.length,"AP")}) isn't in the planner, so it was left out. Add it to the Buildings tab to include it.`, true); continue; }
+    if (targets.length>1){ const all=new Set(targets.flatMap(p=>[...floorSet(p.floors)])); const off=tab.aps.filter(a=>!all.has(a.floor));
+      if (off.length) say(`${tab.name}: ${plural(off.length,"AP")} on ${listAnd([...new Set(off.map(a=>a.floor||"no floor"))])}, which none of its rows in the planner covers, so they were left out.`, true); }
+    for (const p of targets){
+      const fl = targets.length>1 ? floorSet(p.floors) : null;
+      const aps = fl ? tab.aps.filter(a=>fl.has(a.floor)) : tab.aps;
+      const seen=new Set(); let dup=0, oos=0, pre=0, notStarted=0, issues=0, undated=0; const byDate=new Map();
+      for (const a of aps){
+        if (seen.has(a.key)){ dup++; continue; } seen.add(a.key);
+        if (a.status==="OUT OF SCOPE"){ oos++; continue; }
+        if (INSTALLED.has(a.status)){
+          if (a.status==="ISSUE") issues++;
+          const d=trackerDate(a.raw, lo, hi);
+          if (d.d){ const k=iso(d.d); if (!byDate.has(k)) byDate.set(k,{n:0, floors:new Set()}); const b=byDate.get(k); b.n++; if (a.floor) b.floors.add(a.floor); }
+          else { undated++; if (d.how==="implausible") late.push(`${a.host} (${d.raw})`); }
+          continue; }
+        if (a.status==="PRE-MIGRATION ISSUE"){ pre++; continue; }
+        notStarted++; if (a.status && a.status!=="NOT STARTED") odd.set(a.status,(odd.get(a.status)||0)+1);
+      }
+      const scope=aps.length-dup-oos, inTracker=[...byDate.values()].reduce((s,b)=>s+b.n,0)+undated;
+      const lg=logged.get(p.building)||new Map(), inLog=[...lg.values()].reduce((s,n)=>s+n,0);
+      // new installs: the difference, put on the latest tracker dates that have more than the log; the rest on the day the tracker was saved
+      let extra=inTracker-inLog; const mine=[];
+      if (extra>0){
+        for (const k of [...byDate.keys()].sort().reverse()){ if (extra<=0) break; const more=byDate.get(k).n-(lg.get(k)||0);
+          if (more>0){ const n=Math.min(more,extra); mine.push({ date:k, n, floors:byDate.get(k).floors }); extra-=n; } }
+        if (extra>0){ mine.push({ date:iso(savedDay), n:extra, undated:true, floors:new Set() }); extra=0; }
+      } else if (extra<0) say(`${p.building}: the tracker has ${plural(-extra,"fewer AP")} installed than the Install Log (${nf.format(inTracker)} against ${nf.format(inLog)}). The Install Log hasn't been changed; check it against the tracker.`, true);
+      const added=mine.reduce((s,a)=>s+a.n,0), installed=inLog+added;
+      for (const a of mine) adds.push({ ...a, building:p.building, order:p.order });
+      // the building's row on the Buildings tab
+      const set={};
+      if (scope!==p.aps){ set.listed=aps.length; set.oos=oos; set.dup=dup;
+        say(`${p.building}: the tracker lists ${plural(scope,"AP")} where the planner had ${nf.format(p.aps)}, so its scope is now ${nf.format(scope)}.`, true); }
+      if (pre!==p.pre) set.pre=pre;
+      if (targets.length===1){ const ft=floorText(new Set(aps.map(a=>a.floor).filter(Boolean))); if (ft && ft!==p.floors) set.floors=ft; }
+      let status=p.status;
+      if (p.status!=="Out of scope" && scope>0){
+        if (installed>=scope) status="Complete";
+        else if (installed>0 && p.status!=="On hold") status="In progress";
+      }
+      if (status!==p.status){ set.status=status; }
+      const days=[...lg.keys(), ...mine.map(a=>a.date)].sort();
+      if (status==="Complete" && !(p.fixedStart && p.fixedEnd) && days.length){ set.fixedStart=days[0]; set.fixedEnd=days[days.length-1]; }
+      if (added || set.listed!=null || set.pre!=null || set.status || set.floors){
+        const last=days.length?parse(days[days.length-1]):null;
+        let note = installed>=scope && scope>0 ? `All ${nf.format(scope)} installed, ${range(parse(days[0]),last)}.`
+          : installed===0 ? `${plural(scope,"AP")}, none installed yet${pre?` (${plural(pre,"pre-migration issue")})`:""}.`
+          : `${nf.format(installed)} of ${nf.format(scope)} installed${last?`, the last on ${fShort.format(last)}`:""}.`;
+        const left=[]; if (notStarted) left.push(`${nf.format(notStarted)} not started`); if (pre) left.push(plural(pre,"pre-migration issue"));
+        if (installed>0 && installed<scope && left.length) note+=` Left: ${listAnd(left)}.`;
+        if (issues) note+=` ${plural(issues,"AP")} installed with an issue.`;
+        if (p.status==="On hold" && installed<scope) note+=" On hold.";
+        set.notes=`${note} From the ${t.site} tracker saved ${fShort.format(t.saved)}.`;
+      }
+      if (Object.keys(set).length) cells.push({ p, set });
+      const bits=[];
+      if (added){
+        const parts=mine.map(a=>a.undated ? `${nf.format(a.n)} with no date in the tracker, logged on ${fShort.format(parse(a.date))}, the day it was saved` : `${nf.format(a.n)} on ${fShort.format(parse(a.date))}${a.floors.size?` (${floorList(a.floors)})`:""}`);
+        bits.push(`${plural(added,"AP")} added to the Install Log: ${listAnd(parts)}`); }
+      if (pre!==p.pre) bits.push(`${plural(pre,"pre-migration issue")} (was ${nf.format(p.pre)})`);
+      if (status!==p.status) bits.push(`now ${status==="Complete"?"complete":status.toLowerCase()} (was ${p.status.toLowerCase()})`);
+      if (set.floors) bits.push(`floors now ${set.floors} (were ${p.floors||"blank"})`);
+      if (bits.length) say(`${p.building}: ${bits.join("; ")}. ${nf.format(installed)} of ${nf.format(scope)} installed.`);
+    }
+  }
+  for (const [st,n] of odd) say(`${plural(n,"AP")} with the status "${st}", counted as not started.`, true);
+  if (late.length) say(`${plural(late.length,"AP")} marked installed with a date after the tracker was saved, so treated as undated: ${late.slice(0,4).join(", ")}${late.length>4?"…":""}.`, true);
+  return { lines, cells, adds };
+}
+// ---- writing the changes into the planner file itself
+const XNS="http://schemas.openxmlformats.org/spreadsheetml/2006/main", RNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const colNo = ref => { const m=ref.match(/^([A-Z]+)(\d+)$/); let n=0; for (const ch of m[1]) n=n*26+ch.charCodeAt(0)-64; return { col:n, row:+m[2] }; };
+const serial = isoDay => { const [y,m,d]=isoDay.split("-").map(Number); return (Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000; };
+function setCell(doc, data, ref, value){
+  const { row, col }=colNo(ref);
+  let r=[...data.children].find(x=>+x.getAttribute("r")===row);
+  if (!r){ r=doc.createElementNS(XNS,"row"); r.setAttribute("r",row); data.insertBefore(r, [...data.children].find(x=>+x.getAttribute("r")>row)||null); }
+  r.removeAttribute("spans");
+  let c=[...r.children].find(x=>x.getAttribute("r")===ref);
+  if (!c){ c=doc.createElementNS(XNS,"c"); c.setAttribute("r",ref); r.insertBefore(c, [...r.children].find(x=>colNo(x.getAttribute("r")).col>col)||null);
+    const above=[...data.children].filter(x=>+x.getAttribute("r")<row).reverse().map(x=>[...x.children].find(y=>colNo(y.getAttribute("r")).col===col)).find(Boolean);
+    if (above && above.getAttribute("s")) c.setAttribute("s", above.getAttribute("s")); }
+  while (c.firstChild) c.removeChild(c.firstChild); c.removeAttribute("t");
+  if (value==null || value==="") return;
+  if (typeof value==="number"){ const v=doc.createElementNS(XNS,"v"); v.textContent=String(value); c.append(v); return; }
+  c.setAttribute("t","inlineStr"); const is=doc.createElementNS(XNS,"is"), t=doc.createElementNS(XNS,"t");
+  t.setAttributeNS("http://www.w3.org/XML/1998/namespace","xml:space","preserve"); t.textContent=String(value); is.append(t); c.append(is);
+}
+function patchPlanner(buf, edits){
+  const zip=XLSX.CFB.read(new Uint8Array(buf),{type:"array"});
+  const entry=path=>{ const i=zip.FullPaths.findIndex(x=>x.endsWith("/"+path)); return i>=0 ? zip.FileIndex[i] : null; };
+  const dec=new TextDecoder(), enc=new TextEncoder(), P=new DOMParser(), S=new XMLSerializer();
+  const read=e=>dec.decode(e.content), write=(e,doc,orig)=>{ const head=(orig.match(/^<\?xml[^>]*\?>\s*/)||["<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"])[0]; e.content=enc.encode(head+S.serializeToString(doc)); e.size=e.content.length; };
+  const wbE=entry("xl/workbook.xml"), relE=entry("xl/_rels/workbook.xml.rels");
+  const wbX=read(wbE), wdoc=P.parseFromString(wbX,"application/xml"), rdoc=P.parseFromString(read(relE),"application/xml");
+  for (const [sheet, cells] of Object.entries(edits)){
+    if (!cells.length) continue;
+    const sh=[...wdoc.getElementsByTagNameNS(XNS,"sheet")].find(x=>x.getAttribute("name")===sheet); if (!sh) throw new Error(`The planner has no ${sheet} tab.`);
+    const rid=sh.getAttributeNS(RNS,"id"), rel=[...rdoc.getElementsByTagName("Relationship")].find(x=>x.getAttribute("Id")===rid);
+    const target=rel.getAttribute("Target"), e=entry(target.startsWith("/")?target.slice(1):"xl/"+target.replace(/^\.\//,""));
+    const x=read(e), doc=P.parseFromString(x,"application/xml"); if (doc.getElementsByTagName("parsererror").length) throw new Error(`The ${sheet} tab couldn't be read.`);
+    const data=doc.getElementsByTagNameNS(XNS,"sheetData")[0];
+    for (const [ref,v] of cells) setCell(doc, data, ref, v);
+    write(e, doc, x);
+  }
+  // Excel works every formula out again when the file is next opened
+  const calc=wdoc.getElementsByTagNameNS(XNS,"calcPr")[0]; if (calc){ calc.setAttribute("fullCalcOnLoad","1"); write(wbE, wdoc, wbX); }
+  const out=XLSX.CFB.write(zip,{fileType:"zip", type:"array", compression:true});
+  return out instanceof ArrayBuffer ? out : ArrayBuffer.isView(out) ? out.buffer.slice(out.byteOffset, out.byteOffset+out.byteLength) : new Uint8Array(out).buffer;
+}
+function plannerEdits(results){
+  const B=model.bCols, L=model.logSheet; const bc=[], lc=[];
+  const colOf = k => B[k];
+  for (const res of results) for (const { p, set } of res.cells){
+    const r=p.sheetRow, put=(k,v)=>{ if (colOf(k)) bc.push([`${colOf(k)}${r}`, v]); };
+    if (set.listed!=null){ put("rows in tracker", set.listed); put("out of scope", set.oos); put("duplicate rows", set.dup); }
+    if (set.pre!=null) put("pre-migration issues", set.pre);
+    if (set.floors) put("floors", set.floors);
+    if (set.fixedStart){ put("fixed start", serial(set.fixedStart)); put("fixed end", serial(set.fixedEnd)); }
+    if (set.status) put("status", set.status);
+    if (set.notes) put("notes", set.notes);
+  }
+  if (!L) throw new Error("Couldn't find the Install Log table in the planner.");
+  let row=L.next;
+  const adds=results.flatMap(r=>r.adds.map(a=>({...a, src:r.src}))).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.order-b.order);
+  for (const a of adds){
+    lc.push([`${L.date}${row}`, serial(a.date)], [`${L.building}${row}`, a.building], [`${L.aps}${row}`, a.n]);
+    if (L.notes) lc.push([`${L.notes}${row}`, a.undated ? `No date in the ${a.src.site} tracker, so logged on the day it was saved. From ${a.src.name}`
+      : `${a.floors.size?floorList(a.floors).replace(/^./,c=>c.toUpperCase())+". ":""}Date from ${a.src.name}`]);
+    row++;
+  }
+  return { "Buildings":bc, "Install Log":lc };
+}
+// ---- the panel
+function impReport(file, res, t, skipped){
+  const card=el("div",{class:"imp-file", style:t&&t.site?`--c:${siteVar(t.site)}`:null});
+  card.append(el("h3",{text: t && t.kind==="tracker" ? `${SITES[t.site]||"Unknown site"} tracker` : file.name}));
+  if (t && t.kind==="tracker") card.append(el("span",{class:"src", text:`${file.name} · saved ${fStamp.format(t.saved)}`}));
+  const ul=el("ul");
+  if (!t) ul.append(el("li",{class:"warn",text:"This file couldn't be opened as a spreadsheet. If it's open in Excel, close it and try again."}));
+  else if (t.kind==="planner") ul.append(el("li",{class:"warn",text:"This is a planner, not a site tracker, so it was left out. To look at a different planner, open it in place of Barts_WiFi_Refresh_Planner.xlsx."}));
+  else if (t.kind==="other") ul.append(el("li",{class:"warn",text:"This doesn't look like a site progress tracker: none of its tabs has a New AP Hostname column."}));
+  else if (!t.site) ul.append(el("li",{class:"warn",text:"Couldn't tell which site this tracker is for. Put the site code (RLH, MEH, SBH, RS, NUH or WCH) in the file name and import it again."}));
+  else if (skipped) ul.append(el("li",{class:"warn",text:`A newer ${t.site} tracker (${skipped}) was imported at the same time, so this one was left out.`}));
+  else { for (const l of res.lines) ul.append(el("li",{class:l.warn?"warn":null, text:l.text}));
+    if (!res.adds.length && !res.cells.length) ul.prepend(el("li",{text:"No new installs or changes since the planner was last updated."})); }
+  card.append(ul); return card;
+}
+async function importTrackers(files){
+  if (!files.length || !model) return;
+  const btn=$("impBtn"); btn.disabled=true; $("imp").hidden=false; $("impSaved").textContent="";
+  const box=$("impFiles"), cards=[];
+  const before=model.log.reduce((s,e)=>s+e.aps,0);
+  try {
+    const read=[];
+    for (const f of files){ let t=null; try { t=readTracker(await f.arrayBuffer(), f); } catch(e){ console.error(e); } read.push({ f, t }); }
+    // one tracker per site: the most recently saved
+    const latest={}; for (const x of read) if (x.t && x.t.kind==="tracker" && x.t.site && (!latest[x.t.site] || x.t.saved>latest[x.t.site].t.saved)) latest[x.t.site]=x;
+    const results=[];
+    for (const x of read){
+      const keep=x.t && x.t.kind==="tracker" && x.t.site && latest[x.t.site]===x;
+      const res = keep ? compareTracker(x.t) : null; if (res){ res.src={ site:x.t.site, name:x.f.name }; results.push(res); }
+      cards.push(impReport(x.f, res, x.t, x.t && x.t.kind==="tracker" && x.t.site && !keep ? latest[x.t.site].f.name : null));
+    }
+    const changes=results.some(r=>r.adds.length||r.cells.length);
+    if (changes){
+      const buf=patchPlanner(plannerBuf, plannerEdits(results));
+      const names=results.map(r=>r.src.name);
+      load(buf instanceof ArrayBuffer ? buf : new Uint8Array(buf).buffer, { name:`${XLSX_FILE} with ${plural(names.length,"tracker")} imported`, modified:new Date() });
+      imported.push(...names); impDirty=true;
+      if (window.MASTER_BRIDGE) window.MASTER_BRIDGE.planner(plannerBuf, XLSX_FILE);
+    }
+    box.prepend(...cards);
+    const after=model.log.reduce((s,e)=>s+e.aps,0), total=model.rows.reduce((s,r)=>s+(r.status==="Out of scope"?0:Math.max(0,r.aps)),0);
+    $("impTotal").hidden=false;
+    $("impTotal").textContent = changes ? `${after>before?`${plural(after-before,"AP")} added. `:""}${nf.format(after)} of ${nf.format(total)} APs installed (${Math.round(after/Math.max(1,total)*100)}%).`
+      : `Nothing to change: the planner already matches ${files.length===1?"this tracker":"these trackers"}.`;
+    $("impActions").hidden=plannerBuf===originalBuf; $("imp").classList.toggle("unsaved", impDirty);
+    $("impSaved").textContent = impDirty ? (window.MASTER_BRIDGE ? "Added to the planner in this file. Select Save at the top to keep it. You can also download the updated planner on its own."
+      : "These figures aren't saved yet. Download the updated planner and upload it to GitHub, replacing the old one, to keep them.") : "";
+    $("h-imp").focus();
+  } catch(err){ console.error(err); box.prepend(el("div",{class:"imp-file"}, el("h3",{text:"Couldn't import the trackers"}), el("ul",{}, el("li",{class:"warn",text:err.message||String(err)})))); }
+  finally { btn.disabled=false; }
+}
+$("impBtn").addEventListener("click",()=>$("impPick").click());
+$("impMore").addEventListener("click",()=>$("impPick").click());
+$("impPick").addEventListener("change",e=>{ const l=[...e.target.files]; e.target.value=""; importTrackers(l); });
+$("imp").addEventListener("dragover",e=>{ e.preventDefault(); $("imp").classList.add("over"); });
+$("imp").addEventListener("dragleave",()=>$("imp").classList.remove("over"));
+$("imp").addEventListener("drop",e=>{ e.preventDefault(); $("imp").classList.remove("over"); importTrackers([...e.dataTransfer.files]); });
+$("impClose").addEventListener("click",()=>{ $("imp").hidden=true; $("impBtn").focus(); });
+$("impSave").addEventListener("click",()=>{ saveBlob(new Blob([plannerBuf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), XLSX_FILE);
+  impDirty=false; $("imp").classList.remove("unsaved");
+  $("impSaved").textContent = window.MASTER_BRIDGE ? `Downloaded ${XLSX_FILE}. The planner in this file has the same figures; select Save at the top to keep them here too.`
+    : `Downloaded ${XLSX_FILE}. Upload it to GitHub in place of the old one to update the website. If your browser added a number to the name, take it out first.`; });
+$("impUndo").addEventListener("click",()=>{ load(originalBuf, originalSource); imported=[]; impDirty=false;
+  if (window.MASTER_BRIDGE) window.MASTER_BRIDGE.planner(plannerBuf, XLSX_FILE);
+  $("impFiles").replaceChildren(); $("impTotal").hidden=true; $("impActions").hidden=true; $("imp").classList.remove("unsaved");
+  $("impSaved").textContent="The import has been undone. The figures are back to the planner as it was."; });
+addEventListener("beforeunload", e=>{ if (impDirty && !window.MASTER_BRIDGE){ e.preventDefault(); e.returnValue=""; } });
 
 function bootSnapshot(){
   const m=SNAP.model; m.phases=new Map(m.phases); m.nwd=new Map(m.nwd); if (m.source.modified) m.source.modified=new Date(m.source.modified);

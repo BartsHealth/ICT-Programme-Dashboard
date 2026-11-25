@@ -75,6 +75,7 @@ To make the file, the front screen opens each dashboard out of sight and takes a
 - **Which file is which:** each planner is recognised by its tabs, not its name, so a renamed copy still works. A site tracker or the original patient monitoring plan is turned away with a note, because tracker progress goes into the Wi-Fi planner first. Before the figures change, each new planner is opened by its dashboard. If the dashboard can't read it, the figures from before are kept.
 - **Today's date:** the overdue actions, late milestones and forecasts use today's date, the same as the website.
 - **Spreadsheet reader:** the file uses the current spreadsheet reader from its website when it's online, and the copy built into the file when it isn't.
+- **Site trackers:** to add a site tracker's progress, open the **Wi-Fi** tab and use **Import tracker updates** at the top of it.
 - **When a page changes:** if wifi.html or another page gets a new version, the master file needs rebuilding with the new pages.
 
 ## A copy of a dashboard for SharePoint or Teams
@@ -142,7 +143,25 @@ Edit the planner spreadsheet in Excel (settings on the **Order of Works** tab; f
 
 Fixed dates: a building or area marked **Complete** keeps its dates, and the rest of the plan starts the working day after the last completed one. One with fixed dates that isn't complete yet (such as Alexander Wing, booked for 9 to 13 Nov) is a booking: it keeps its dates and the plan carries on alongside it.
 
-Keep the Install Log up to date: the front screen shows "Figures as of" the last day logged, and turns amber if nothing is logged for more than 5 working days of planned work.
+For the Wi-Fi planner, **Import tracker updates** on the dashboard does the Install Log and Buildings tab for you (see below). Keep the Install Log up to date: the front screen shows "Figures as of" the last day logged, and turns amber if nothing is logged for more than 5 working days of planned work.
+
+## Importing the Wi-Fi tracker updates
+
+The Wi-Fi dashboard has an **Import tracker updates** button at the top of the page. Choose one or more site progress trackers (RLH, MEH, SBH, RS, NUH and WCH), and the dashboard brings the planner up to date from them and shows the new figures straight away.
+
+- **What counts as installed:** a tracker row counts when its status is COMPLETE or ISSUE. Rows marked PRE-MIGRATION ISSUE, NOT STARTED or anything else don't count, and rows marked OUT OF SCOPE or repeated in the same tab are left out of the scope. Section headings in the hostname column, such as "Snags", are ignored.
+- **The Install Log:**
+  - For each building, the import compares the installs in the tracker with the Install Log and adds only the difference, on the tracker's dates, so corrections already made in the log are kept.
+  - An installed AP with no date in the tracker is logged on the day the tracker was saved, and the report says so.
+  - Dates typed day-first into a cell Excel reads month-first are read the right way round.
+  - If a tracker has fewer installs than the log, the log isn't changed and the report asks you to check it.
+- **The Buildings tab:** the import updates the scope (rows in the tracker, out of scope and duplicates), the floors, the pre-migration issues and the status:
+  - **Complete** when every AP in scope is installed. A building that becomes complete without fixed dates gets its first and last install days as fixed dates.
+  - **In progress** once some are installed. **On hold** and **Out of scope** are left as they are.
+  - Changed buildings get a new note saying where they stand.
+- **Matching:** the site comes from the file name, and each tab is matched to the building of the same name. The two Central Tower rows are split by their floors. A tab that isn't in the planner is reported and left out. If two trackers for the same site are chosen, the one saved most recently is used.
+- **Keeping the result:** nothing is saved until you select **Download updated planner**. Upload the downloaded file to GitHub in place of the old one. The file is the same planner with only those cells changed: every formula, format and check stays as it was, and Excel works the formulas out again when it's opened. **Undo the import** puts the figures back.
+- **In the master file:** an import on the Wi-Fi tab goes straight into the master file's own planner, and the other tabs pick it up. Select **Save** at the top to keep it.
 
 ## The printer replacement
 
@@ -159,7 +178,7 @@ Each new programme gets its own page and its own spreadsheet. In `index.html`, f
 
 ## Good to know
 
-- Page versions are shown under each title: the front screen is **1.12** (16 Nov 2026); the Wi-Fi dashboard is **2.6**, the printer dashboard **1.8** and the patient monitoring dashboard **1.1** (23 Nov 2026). The timelines always list phases and areas in date order, and always fit the width of the page with no scroll bars: on a narrower screen the name column gets narrower, long names end in "…", and the month labels thin out (years dropped except where the year changes, then every other month, or quarters on the patient monitoring timeline). Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
+- Page versions are shown under each title: the front screen is **1.12** (16 Nov 2026); the Wi-Fi dashboard is **2.7** (25 Nov 2026); the printer dashboard is **1.8** and the patient monitoring dashboard **1.1** (23 Nov 2026). The timelines always list phases and areas in date order, and always fit the width of the page with no scroll bars: on a narrower screen the name column gets narrower, long names end in "…", and the month labels thin out (years dropped except where the year changes, then every other month, or quarters on the patient monitoring timeline). Under **Planned vs actual**, the plan is a red dashed line, the actual a thick blue line with a dot for each day logged, and the forecast a blue dotted line; the gap between plan and actual is shaded green (ahead) or red (behind). **Progress so far** (the default while work is under way) zooms in on the dates to date and the next week; **Whole plan** shows everything to the finish. Below it, two bar charts show how far ahead (above the zero line) or behind (red, below it) the Install Log is against the plan: one for each day and one for the running total, with the figures available as a table. If you still see an older number after uploading, wait a few minutes and refresh with Ctrl+F5.
 - **On phones** (laid out for iPhone 15 and Android phones 360 to 412 pixels wide, portrait or landscape): charts are drawn at the phone's width so their text stays at least 12 px; the building and area lists become one card per row; the timeline fits the screen, with shorter names and fewer month labels, and the notes beside the patient monitoring bars are left off (tap a bar to see them); tapping a bar or a chart shows its figures. All pages use the Arimo font (same shapes and widths as Arial) from Google Fonts so iPhones and Android phones look the same; if a network blocks Google Fonts they fall back to Arial.
 - Spreadsheets must keep their tab names and column headings, or the pages can't read them. Adding rows, notes or changing values is fine.
 - The pages load their spreadsheet reader from `cdn.sheetjs.com`. If a network blocks that site, download `xlsx.full.min.js` from https://cdn.sheetjs.com/, upload it here, and change the `<script src=…>` near the top of each page to `xlsx.full.min.js`.
